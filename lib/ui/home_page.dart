@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../services/connectivity_service.dart';
 import '../services/update_service.dart';
 import '../state/app_state.dart';
+import '../state/locale_state.dart';
 import '../state/native_bridge.dart';
 import 'dialogs/update_dialog.dart';
 import 'pages/tutorial_page.dart';
@@ -135,14 +136,16 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final appState = context.watch<AppState>();
+    final localeState = context.watch<LocaleState>();
+    final langKey = localeState.locale.languageCode;
 
     final tabs = [
-      const ProxyTab(),
+      ProxyTab(key: ValueKey('proxy_$langKey')),
       BrowserTab(key: _browserKey),
-      const HistoryTab(),
-      const InterceptTab(),
-      const RepeaterTab(),
-      const SettingsTab(),
+      HistoryTab(key: ValueKey('history_$langKey')),
+      InterceptTab(key: ValueKey('intercept_$langKey')),
+      RepeaterTab(key: ValueKey('repeater_$langKey')),
+      SettingsTab(key: ValueKey('settings_$langKey')),
     ];
 
     final destinations = [

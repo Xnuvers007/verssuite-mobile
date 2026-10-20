@@ -225,28 +225,67 @@ class SettingsTab extends StatelessWidget {
           _SectionHeader(title: l.tr('language')),
           const SizedBox(height: 8),
           Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 children: [
-                  RadioListTile<String>(
-                    title: Text(l.tr('english')),
-                    subtitle: const Text('English'),
-                    value: 'en',
-                    groupValue: localeState.locale.languageCode,
-                    activeColor: const Color(0xFF6C63FF),
-                    onChanged: (val) {
-                      if (val != null) localeState.setLocale(Locale(val));
+                  _LanguageOptionTile(
+                    flag: '🇺🇸',
+                    title: 'English',
+                    subtitle: 'English (United States)',
+                    code: 'en',
+                    isSelected: localeState.locale.languageCode == 'en',
+                    onTap: () {
+                      if (localeState.locale.languageCode != 'en') {
+                        localeState.setLocale(const Locale('en'));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Row(
+                              children: [
+                                Text('🇺🇸', style: TextStyle(fontSize: 18)),
+                                SizedBox(width: 8),
+                                Text('Language changed to English'),
+                              ],
+                            ),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF6C63FF),
+                          ),
+                        );
+                      }
                     },
                   ),
-                  RadioListTile<String>(
-                    title: Text(l.tr('indonesian')),
-                    subtitle: const Text('Bahasa Indonesia'),
-                    value: 'id',
-                    groupValue: localeState.locale.languageCode,
-                    activeColor: const Color(0xFF6C63FF),
-                    onChanged: (val) {
-                      if (val != null) localeState.setLocale(Locale(val));
+                  const SizedBox(height: 6),
+                  _LanguageOptionTile(
+                    flag: '🇮🇩',
+                    title: 'Bahasa Indonesia',
+                    subtitle: 'Indonesian (Indonesia)',
+                    code: 'id',
+                    isSelected: localeState.locale.languageCode == 'id',
+                    onTap: () {
+                      if (localeState.locale.languageCode != 'id') {
+                        localeState.setLocale(const Locale('id'));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Row(
+                              children: [
+                                Text('🇮🇩', style: TextStyle(fontSize: 18)),
+                                SizedBox(width: 8),
+                                Text('Bahasa berhasil diubah ke Bahasa Indonesia'),
+                              ],
+                            ),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Color(0xFF00D4AA),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -358,7 +397,7 @@ class SettingsTab extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ─── Simulasi & Pengujian Event (User Testing Sandbox) ──
-          const _SectionHeader(title: 'Testing & Simulasi Event'),
+          _SectionHeader(title: localeState.locale.languageCode == 'id' ? 'Testing & Simulasi Event' : 'Event Testing & Simulator'),
           const SizedBox(height: 8),
           const _EventSimulatorCard(),
           const SizedBox(height: 16),
@@ -572,6 +611,102 @@ class SettingsTab extends StatelessWidget {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+}
+
+class _LanguageOptionTile extends StatelessWidget {
+  final String flag;
+  final String title;
+  final String subtitle;
+  final String code;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LanguageOptionTile({
+    required this.flag,
+    required this.title,
+    required this.subtitle,
+    required this.code,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: isSelected
+                ? const Color(0xFF6C63FF).withValues(alpha: 0.15)
+                : Colors.transparent,
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF6C63FF).withValues(alpha: 0.6)
+                  : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(flag, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF6C63FF),
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30, width: 1.5),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

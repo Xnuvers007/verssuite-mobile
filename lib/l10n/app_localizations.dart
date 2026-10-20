@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// Minimal i18n without codegen — just two maps keyed by locale.
@@ -6,8 +7,15 @@ class AppLocalizations {
   AppLocalizations(this.locale);
 
   static AppLocalizations of(BuildContext context) {
-    return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
-        AppLocalizations(const Locale('en'));
+    final loc = Localizations.of<AppLocalizations>(context, AppLocalizations);
+    if (loc != null) return loc;
+
+    try {
+      final currentLocale = Localizations.localeOf(context);
+      return AppLocalizations(currentLocale);
+    } catch (_) {}
+
+    return AppLocalizations(const Locale('en'));
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
@@ -290,11 +298,12 @@ class _AppLocalizationsDelegate
       ['en', 'id'].contains(locale.languageCode);
 
   @override
-  Future<AppLocalizations> load(Locale locale) async =>
-      AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) {
+    return SynchronousFuture<AppLocalizations>(AppLocalizations(locale));
+  }
 
   @override
   bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) =>
-      false;
+      true;
 }
 

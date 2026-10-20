@@ -29,6 +29,7 @@ class VersSuiteApp extends StatelessWidget {
     final localeState = context.watch<LocaleState>();
 
     return MaterialApp(
+      key: ValueKey('app_locale_${localeState.locale.languageCode}'),
       title: 'VersSuite Mobile',
       debugShowCheckedModeBanner: false,
       locale: localeState.locale,
