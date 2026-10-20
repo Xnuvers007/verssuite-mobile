@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/native_bridge.dart';
+import '../pages/tutorial_page.dart';
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -24,6 +25,46 @@ class SettingsTab extends StatelessWidget {
           Text(
             l.tr('settings'),
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          // ─── Tutorial & Panduan ───────────────────────────
+          _SectionHeader(title: l.tr('tutorial')),
+          const SizedBox(height: 8),
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+              ),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6C63FF).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.menu_book_rounded, color: Color(0xFF00D4AA), size: 22),
+              ),
+              title: Text(
+                l.tr('tutorial'),
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+              subtitle: Text(
+                l.tr('tutorial_desc'),
+                style: const TextStyle(fontSize: 12, color: Colors.white60),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white38),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TutorialPage()),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
 

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
+import '../pages/tutorial_page.dart';
 
 class ProxyTab extends StatelessWidget {
   const ProxyTab({super.key});
@@ -22,11 +23,27 @@ class ProxyTab extends StatelessWidget {
             floating: true,
             title: Text(l.tr('app_title')),
             centerTitle: false,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF00D4AA)),
+                tooltip: l.tr('tutorial'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TutorialPage()),
+                  );
+                },
+              ),
+            ],
           ),
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // Tutorial Banner Card
+                _TutorialBannerCard(l: l),
+                const SizedBox(height: 16),
+
                 // Status Card
                 _StatusCard(running: running, l: l),
                 const SizedBox(height: 16),
@@ -384,6 +401,111 @@ class _StatBox extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TutorialBannerCard extends StatelessWidget {
+  final AppLocalizations l;
+  const _TutorialBannerCard({required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF6C63FF).withValues(alpha: 0.18),
+            const Color(0xFF00D4AA).withValues(alpha: 0.08),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TutorialPage()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_rounded,
+                    color: Color(0xFF00D4AA),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            l.tr('tutorial'),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00D4AA).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'GUIDE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF00D4AA),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l.tr('tutorial_desc'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.6),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Colors.white38,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

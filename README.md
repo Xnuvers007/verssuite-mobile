@@ -217,30 +217,118 @@ Anda **tidak perlu menginstal Flutter SDK, Android Studio, atau Java di komputer
 
 ---
 
-## 📱 Panduan Instalasi Sertifikat CA di Android
+---
 
-Untuk dapat mengintersep dan mendekripsi lalu lintas HTTPS (port 443):
+## 📱 Panduan Lengkap Tutorial & Konfigurasi (Tutorial & Setup Guide)
 
-1. Buka aplikasi **VersSuite Mobile**.
-2. Masuk ke tab **Settings** (Pengaturan), lalu tekan tombol **"Export CA Certificate"**.
-3. File sertifikat `verssuite_ca.pem` akan tersimpan di folder `Downloads` perangkat Anda.
-4. Masuk ke Pengaturan Android:
-   - **Android 11 – 15**: Buka `Settings` ➔ `Security & Privacy` ➔ `More Security Settings` ➔ `Encryption & credentials` ➔ `Install a certificate` ➔ `CA certificate`.
-   - Pilih `Install anyway` jika muncul peringatan keamanan, lalu pilih file `verssuite_ca.pem` yang telah diunduh.
+### 1. Cara Pasang Sertifikat CA di Android (How to Install CA Certificate)
+
+Untuk mendekripsi dan menginspeksi lalu lintas HTTPS (port 443), Android memerlukan sertifikat Root CA VersSuite yang terpercaya:
+
+1. **Ekspor Sertifikat dari VersSuite**:
+   - Buka aplikasi **VersSuite Mobile**.
+   - Masuk ke tab **Settings** (atau buka tab **Tutorial**) lalu tekan tombol **"Export CA Certificate"** (Ekspor Sertifikat CA).
+   - File sertifikat `verssuite_ca.pem` akan disimpan di folder `Downloads` perangkat Anda.
+
+2. **Pasang di Pengaturan Sistem Android**:
+   - **Android 11 – 15+**:
+     1. Buka **Settings** HP ➔ **Security & Privacy** (Keamanan & Privasi) ➔ **More Security Settings** (Pengaturan Keamanan Lainnya).
+     2. Pilih **Encryption & Credentials** (Enkripsi & Kredensial) ➔ **Install a certificate** (Pasang Sertifikat) ➔ **CA certificate** (Sertifikat CA).
+     3. Pilih **Install anyway** (Tetap pasang) saat muncul peringatan keamanan sistem.
+     4. Masukkan PIN / Sidik Jari Anda, lalu cari dan pilih file `verssuite_ca.pem` di folder **Downloads**.
+   - **Android 7 – 10**:
+     1. Buka **Settings** ➔ **Security** (Keamanan) ➔ **Install from storage** (Pasang dari penyimpanan).
+     2. Pilih file `verssuite_ca.pem` dan beri nama sertifikat (misal: `VersSuite CA`).
+
+3. **Perangkat Root / Magisk / KernelSU (Opsional untuk System Trust Store)**:
+   - Agar semua aplikasi Android mempercayai sertifikat secara global tanpa modifikasi:
+     - Gunakan modul Magisk **"AlwaysTrustUserCerts"** atau **"TrustMeAlready"**.
+     - Atau pindahkan hash sertifikat ke direktori `/system/etc/security/cacerts/`.
+
+4. **Untuk Pengembang Aplikasi (Network Security Config)**:
+   - Tambahkan deklarasi berikut pada file `res/xml/network_security_config.xml` aplikasi Anda agar mempercayai User CA:
+     ```xml
+     <?xml version="1.0" encoding="utf-8"?>
+     <network-security-config>
+         <base-config cleartextTrafficPermitted="true">
+             <trust-anchors>
+                 <certificates src="system" />
+                 <certificates src="user" />
+             </trust-anchors>
+         </base-config>
+     </network-security-config>
+     ```
 
 ---
 
-## 🌐 Konfigurasi Proxy di Perangkat
+### 2. Cara Mengubah Port & Bind Address (Change Port & Bind Address)
 
-1. Pastikan proxy di aplikasi VersSuite Mobile sudah aktif (tekan **Start Proxy** pada tab Proxy).
-2. Buka Pengaturan Wi-Fi pada perangkat Android:
-   - Tekan dan tahan atau klik ikon gerigi pada koneksi Wi-Fi yang aktif.
-   - Pilih **Modify network** (Ubah jaringan) ➔ **Advanced options**.
-   - Ubah opsi **Proxy** dari *None* menjadi **Manual**.
-   - Masukkan:
-     - **Proxy hostname**: `127.0.0.1` (atau IP lokal perangkat jika mentrafik dari perangkat lain di jaringan yang sama).
-     - **Proxy port**: `8080` (default VersSuite Mobile).
-3. Simpan perubahan. Seluruh permintaan HTTP/HTTPS kini akan melewati VersSuite Mobile.
+Jika port default `8080` bentrok (*Address already in use*) dengan aplikasi lain seperti Termux, HTTP server lokal, atau proxy lainnya:
+
+1. Buka tab **Settings** (Pengaturan) di VersSuite Mobile.
+2. Di bagian **Proxy Configuration**:
+   - **Port**: Ubah angka `8080` ke port lain yang diinginkan (misal `8081`, `8888`, atau `9090`).
+   - **Bind Address**:
+     - `0.0.0.0` *(Default)*: Proksi mendengarkan di seluruh antarmuka jaringan (Wi-Fi, hotspot seluler, loopback). Berguna jika perangkat lain (PC/HP lain) ingin diarahkan ke HP ini.
+     - `127.0.0.1` *(Localhost)*: Proksi hanya dapat diakses secara lokal oleh aplikasi di dalam HP ini.
+3. Kembali ke tab **Proxy**, tekan tombol **Stop Proxy** lalu **Start Proxy** kembali untuk menerapkan port baru.
+
+---
+
+### 3. Cara Setting Wi-Fi Proxy di HP Android (Android Wi-Fi Proxy Setup)
+
+Untuk membelokkan seluruh trafik browser dan aplikasi target ke VersSuite Mobile:
+
+1. Pastikan status proxy di tab **Proxy** sudah **Running** (berwarna hijau).
+2. Masuk ke **Settings** HP ➔ **Wi-Fi**.
+3. Tekan ikon roda gigi ⚙️ di samping nama Wi-Fi Anda yang sedang terhubung.
+4. Pilih **Modify network** (Ubah jaringan / ikon pensil) ➔ Buka **Advanced options** (Opsi Lanjutan).
+5. Ubah opsi **Proxy** dari *None* menjadi **Manual**.
+6. Masukkan parameter berikut:
+   - **Proxy hostname (Nama Host)**: Masukkan `127.0.0.1` (atau IP Wi-Fi lokal HP Anda jika mengarahkan dari perangkat lain).
+   - **Proxy port**: `8080` (sesuai nomor port yang diset di VersSuite).
+   - **Bypass proxy for**: Kosongkan atau biarkan default.
+7. Tekan **Save** (Simpan). Buka browser atau aplikasi di HP Anda, seluruh paket trafik HTTP/HTTPS akan terekam secara live di tab **History**!
+
+---
+
+### 4. Browser Bawaan & Kustomisasi Lengkap (In-App Browser & Customization)
+
+VersSuite Mobile dilengkapi dengan browser terintegrasi yang **langsung tersambung ke proxy VersSuite tanpa perlu setup Wi-Fi manual**:
+
+- **Kontrol Navigasi Lengkap**:
+  - `←` **Panah Kiri**: Previous (kembali ke halaman sebelumnya dalam riwayat web).
+  - `→` **Panah Kanan**: Next (maju ke halaman berikutnya).
+  - `↻` **Garis Bulet (Refresh)**: Memuat ulang halaman web yang sedang aktif.
+  - `🏠` **Beranda (Home)**: Kembali ke halaman utama target.
+  - **Inputan URL Pill dengan Gembok (`🔒`)**: Menampilkan indikator keamanan SSL (hijau untuk HTTPS, kuning untuk HTTP) dan input URL langsung atau kata kunci pencarian.
+- **Kustomisasi Browser via Tombol ⚙️ / `tune`**:
+  - **User-Agent Selector**: Pilih preset instan (Android Chrome, iOS Safari iPhone, iPad Safari, Windows Chrome Desktop, macOS Safari) atau ketik **Custom User-Agent** sendiri.
+  - **Mesin Pencari (Search Engine)**: Pilih mesin pencari default: Google, DuckDuckGo, Bing, Brave Search, Yahoo, Startpage, atau Custom search URL.
+  - **IP Spoofing & Network**: Fitur simulasi header `X-Forwarded-For`, `X-Real-IP`, dan `Client-IP`, serta tombol 1-klik **"Check My IP"** (Cek IP Saya).
+  - **Toggles**: Toggle eksekusi JavaScript (On/Off), toggle Desktop Mode, dan tombol pembersih Cache & Cookies.
+
+---
+
+### 5. Double-Click Back to Exit & Desain Responsif Multi-Perangkat
+
+- **Double-Click Back to Exit**: Mencegah aplikasi tertutup tanpa sengaja saat sedang melakukan analisis jaringan. Jika tombol Back ditekan sekali, akan muncul pemberitahuan *"Tekan sekali lagi untuk keluar"*. Menekan tombol Back sekali lagi dalam waktu 2 detik akan menutup aplikasi secara bersih. Jika sedang berada di tab Browser dan halaman bisa kembali, tombol Back akan memicu navigasi WebView mundur terlebih dahulu.
+- **Responsif Lintas Perangkat**:
+  - 📱 **Smartphone (Layar Portrait < 640px)**: Bottom NavigationBar yang ergonomis dan mudah dijangkau satu tangan.
+  - 📟 **Tablet & iPad (640px – 1024px)**: Side NavigationRail yang memaksimalkan area kerja vertikal.
+  - 💻 **Laptop / PC / Desktop / Android TV (>= 1024px)**: Extended NavigationRail dengan branding penuh, serta **Master-Detail Split Pane** di tab History (daftar request di sebelah kiri dan detail inspeksi lengkap di sebelah kanan berdampingan, mirip dengan Burp Suite Desktop).
+  - 📺 **Android TV Ready**: Mendukung navigasi D-Pad dan tanpa kewajiban touchscreen di manifest (`android.software.leanback` & `touchscreen=false`).
+
+---
+
+### 6. SSL Pinning Bypass & Troubleshooting
+
+Jika target aplikasi menampilkan error *SSL Handshake failed*:
+- **Frida CodeShare (Universal Unpinning)**:
+  ```bash
+  frida --codeshare akabe1/frida-multiple-unpinning -U -f com.target.app
+  ```
+- **LSPosed / Xposed Modules**: Modul **TrustMeAlready** atau **JustTrustMe**.
 
 ---
 

@@ -6,8 +6,15 @@ import '../../models/http_models.dart';
 import '../../state/app_state.dart';
 import '../pages/flow_detail_page.dart';
 
-class HistoryTab extends StatelessWidget {
+class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
+
+  @override
+  State<HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<HistoryTab> {
+  HttpFlow? _selectedFlow;
 
   @override
   Widget build(BuildContext context) {
@@ -15,87 +22,195 @@ class HistoryTab extends StatelessWidget {
     final appState = context.watch<AppState>();
     final flows = appState.filteredFlows;
 
-    return SafeArea(
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-            child: Row(
-              children: [
-                Text(
-                  l.tr('history'),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                if (flows.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    onPressed: () => appState.clearFlows(),
-                    tooltip: l.tr('clear_history'),
-                  ),
-              ],
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 800;
 
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              onChanged: appState.setSearchQuery,
-              decoration: InputDecoration(
-                hintText: l.tr('search'),
-                prefixIcon: Icon(Icons.search, size: 20, color: Colors.white.withValues(alpha: 0.4)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                isDense: true,
-              ),
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
+        // Automatically sync selectedFlow if list changed
+        if (_selectedFlow != null && !flows.contains(_selectedFlow)) {
+          _selectedFlow = flows.isNotEmpty ? flows.first : null;
+        }
 
-          // Flow list
-          Expanded(
-            child: flows.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.wifi_tethering_off,
-                          size: 64,
-                          color: Colors.white.withValues(alpha: 0.15),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l.tr('no_flows'),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+        final flowListView = Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    l.tr('history'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: flows.length,
-                    itemBuilder: (context, index) {
-                      return _FlowTile(flow: flows[index]);
-                    },
                   ),
+                  const SizedBox(width: 8),
+                  if (flows.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${flows.length}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF6C63FF),
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  if (flows.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      onPressed: () {
+                        setState(() => _selectedFlow = null);
+                        appState.clearFlows();
+                      },
+                      tooltip: l.tr('clear_history'),
+                    ),
+                ],
+              ),
+            ),
+
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                onChanged: appState.setSearchQuery,
+                decoration: InputDecoration(
+                  hintText: l.tr('search'),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Colors.white.withValues(alpha: 0.4)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  isDense: true,
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+
+            // Flow list
+            Expanded(
+              child: flows.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.wifi_tethering_off,
+                            size: 64,
+                            color: Colors.white.withValues(alpha: 0.15),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            l.tr('no_flows'),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.4),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: flows.length,
+                      itemBuilder: (context, index) {
+                        final flow = flows[index];
+                        final isSelected = isWide && _selectedFlow == flow;
+                        return _FlowTile(
+                          flow: flow,
+                          isSelected: isSelected,
+                          onTap: () {
+                            if (isWide) {
+                              setState(() => _selectedFlow = flow);
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => FlowDetailPage(flow: flow),
+                                ),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+
+        if (!isWide) {
+          return SafeArea(child: flowListView);
+        }
+
+        // ─── Tablet / iPad / Laptop / TV Master-Detail Layout ───
+        return SafeArea(
+          child: Row(
+            children: [
+              // Left Column: Master list
+              SizedBox(
+                width: 360,
+                child: flowListView,
+              ),
+              const VerticalDivider(thickness: 1, width: 1, color: Colors.white10),
+              // Right Column: Detail Inspector
+              Expanded(
+                child: _selectedFlow != null
+                    ? FlowDetailPage(
+                        key: ValueKey(_selectedFlow!.id),
+                        flow: _selectedFlow!,
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF6C63FF).withValues(alpha: 0.12),
+                              ),
+                              child: const Icon(
+                                Icons.ads_click,
+                                size: 32,
+                                color: Color(0xFF6C63FF),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              l.tr('master_detail_detail'),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _FlowTile extends StatelessWidget {
   final HttpFlow flow;
-  const _FlowTile({required this.flow});
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FlowTile({
+    required this.flow,
+    this.isSelected = false,
+    required this.onTap,
+  });
 
   Color _methodColor(String method) {
     switch (method.toUpperCase()) {
@@ -121,14 +236,21 @@ class _FlowTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: isSelected
+              ? const Color(0xFF6C63FF)
+              : Colors.white.withValues(alpha: 0.06),
+          width: isSelected ? 1.5 : 1.0,
+        ),
+      ),
+      color: isSelected
+          ? const Color(0xFF6C63FF).withValues(alpha: 0.12)
+          : const Color(0xFF1A1A2E),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => FlowDetailPage(flow: flow)),
-          );
-        },
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
@@ -154,57 +276,95 @@ class _FlowTile extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // URL and host
+              // Host & Path
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      flow.displayUrl,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
                     Row(
                       children: [
                         if (flow.isHttps)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(Icons.lock, size: 10, color: Colors.white.withValues(alpha: 0.3)),
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Icon(Icons.lock, size: 11, color: Color(0xFF00D4AA)),
                           ),
-                        Text(
-                          flow.request.host,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.4),
+                        Expanded(
+                          child: Text(
+                            flow.request.host,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      flow.request.path.isEmpty ? '/' : flow.request.path,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontFamily: 'monospace',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
-              // Status + size + time
+              // Status & Size
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    flow.statusDisplay,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _statusColor(flow.response?.statusCode),
-                      fontFamily: 'monospace',
+                  if (flow.response != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _statusColor(flow.response!.statusCode).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${flow.response!.statusCode}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _statusColor(flow.response!.statusCode),
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    )
+                  else if (flow.state == FlowState.intercepted)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFAA33).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'PAUSED',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFFFAA33),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF6C63FF)),
                     ),
-                  ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
-                    '${flow.sizeDisplay} · ${flow.durationDisplay}',
+                    flow.response?.formattedSize ?? '',
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.white.withValues(alpha: 0.35),
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontFamily: 'monospace',
                     ),
                   ),
                 ],

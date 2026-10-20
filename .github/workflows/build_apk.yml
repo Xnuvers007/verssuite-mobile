@@ -45,15 +45,13 @@ jobs:
           flutter build apk --release \
             --split-per-abi \
             --tree-shake-icons \
-            --obfuscate \
-            --split-debug-info=build/app/outputs/symbols
+            --android-skip-build-dependency-validation
 
       - name: Build Universal Release APK (All ABIs)
         run: |
           flutter build apk --release \
             --tree-shake-icons \
-            --obfuscate \
-            --split-debug-info=build/app/outputs/symbols
+            --android-skip-build-dependency-validation
 
       - name: List Generated APKs & Sizes
         run: |

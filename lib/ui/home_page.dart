@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
+import 'pages/tutorial_page.dart';
 import 'tabs/proxy_tab.dart';
 import 'tabs/browser_tab.dart';
 import 'tabs/history_tab.dart';
@@ -19,6 +21,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+  DateTime? _lastBackPressTime;
+  final GlobalKey<BrowserTabState> _browserKey = GlobalKey<BrowserTabState>();
 
   @override
   void initState() {
@@ -29,6 +33,37 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _handleBackPress(BuildContext context, AppLocalizations l) {
+    // If currently on Browser tab and can go back in WebView history, do that first!
+    if (_currentIndex == 1 && _browserKey.currentState?.canGoBack == true) {
+      _browserKey.currentState?.goBack();
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastBackPressTime == null ||
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.touch_app, size: 16, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(l.tr('press_back_again_to_exit')),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } else {
+      // User tapped back twice within 2 seconds: cleanly exit app
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -36,7 +71,7 @@ class _HomePageState extends State<HomePage> {
 
     final tabs = [
       const ProxyTab(),
-      const BrowserTab(),
+      BrowserTab(key: _browserKey),
       const HistoryTab(),
       const InterceptTab(),
       const RepeaterTab(),
@@ -84,28 +119,156 @@ class _HomePageState extends State<HomePage> {
       ),
     ];
 
-    return Scaffold(
-      // Use IndexedStack to preserve Browser & Flow states across tab switches
-      body: IndexedStack(
-        index: _currentIndex,
-        children: tabs,
+    final railDestinations = [
+      NavigationRailDestination(
+        icon: const Icon(Icons.wifi_tethering_outlined, size: 22),
+        selectedIcon: const Icon(Icons.wifi_tethering, size: 22),
+        label: Text(l.tr('proxy')),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.06),
-              width: 1,
+      NavigationRailDestination(
+        icon: const Icon(Icons.travel_explore_outlined, size: 22),
+        selectedIcon: const Icon(Icons.travel_explore, size: 22),
+        label: Text(l.tr('browser')),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.history_outlined, size: 22),
+        selectedIcon: const Icon(Icons.history, size: 22),
+        label: Text(l.tr('history')),
+      ),
+      NavigationRailDestination(
+        icon: Badge(
+          isLabelVisible: appState.interceptQueue.isNotEmpty,
+          label: Text('${appState.interceptQueue.length}'),
+          child: const Icon(Icons.pause_circle_outline, size: 22),
+        ),
+        selectedIcon: Badge(
+          isLabelVisible: appState.interceptQueue.isNotEmpty,
+          label: Text('${appState.interceptQueue.length}'),
+          child: const Icon(Icons.pause_circle_filled, size: 22),
+        ),
+        label: Text(l.tr('intercept')),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.replay_outlined, size: 22),
+        selectedIcon: const Icon(Icons.replay, size: 22),
+        label: Text(l.tr('repeater')),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.settings_outlined, size: 22),
+        selectedIcon: const Icon(Icons.settings, size: 22),
+        label: Text(l.tr('settings')),
+      ),
+    ];
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackPress(context, l);
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 640;
+          final isDesktop = constraints.maxWidth >= 1024;
+
+          if (isWide) {
+            // Tablet / iPad / Laptop / Android TV Layout: Side NavigationRail
+            return Scaffold(
+              body: Row(
+                children: [
+                  NavigationRail(
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                    extended: isDesktop,
+                    minExtendedWidth: 190,
+                    backgroundColor: const Color(0xFF12122A),
+                    indicatorColor: const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.shield, color: Colors.white, size: 24),
+                          ),
+                          if (isDesktop) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'VersSuite',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    trailing: Expanded(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: IconButton(
+                            icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF00D4AA)),
+                            tooltip: l.tr('tutorial'),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TutorialPage()),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    destinations: railDestinations,
+                  ),
+                  const VerticalDivider(thickness: 1, width: 1, color: Colors.white10),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _currentIndex,
+                      children: tabs,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Mobile Phone Layout: Bottom NavigationBar
+          return Scaffold(
+            body: IndexedStack(
+              index: _currentIndex,
+              children: tabs,
             ),
-          ),
-        ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
-          destinations: destinations,
-          height: 64,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        ),
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: NavigationBar(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (i) => setState(() => _currentIndex = i),
+                destinations: destinations,
+                height: 64,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
