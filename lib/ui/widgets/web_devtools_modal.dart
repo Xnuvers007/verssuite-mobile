@@ -1013,7 +1013,7 @@ class _WebDevToolsModalState extends State<WebDevToolsModal>
   // 4. NETWORK TAB (MITM Proxy Integration)
   // ─────────────────────────────────────────────────────────────
   Widget _buildNetworkTab(bool isIndonesian) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Card(
