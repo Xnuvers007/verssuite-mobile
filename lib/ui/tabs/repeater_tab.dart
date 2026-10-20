@@ -51,9 +51,9 @@ class _RepeaterTabState extends State<RepeaterTab> {
         request.headers.set('host', uri.host);
       }
 
-      final client = HttpClient()
-        ..badCertificateCallback = (cert, host, port) => true
-        ..connectionTimeout = const Duration(seconds: 15);
+      final client = HttpClient();
+      client.badCertificateCallback = (cert, host, port) => true;
+      client.connectionTimeout = const Duration(seconds: 15);
 
       final uri = Uri.parse(request.url);
       final httpReq = await client.openUrl(request.method, uri);

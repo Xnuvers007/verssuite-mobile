@@ -105,6 +105,15 @@ class ProxyRequest {
     return url.startsWith('https') ? 443 : 80;
   }
 
+  String get path {
+    try {
+      final p = Uri.parse(url).path;
+      return p.isEmpty ? '/' : p;
+    } catch (_) {
+      return '/';
+    }
+  }
+
   /// Serialize to raw HTTP request text.
   String toRaw() {
     final path = Uri.parse(url).path.isEmpty ? '/' : Uri.parse(url).path;
@@ -194,6 +203,13 @@ class ProxyResponse {
   }) : headers = headers ?? HttpHeaders();
 
   int get bodySize => body?.length ?? 0;
+
+  String get formattedSize {
+    final bytes = bodySize;
+    if (bytes < 1024) return '${bytes}B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+  }
 
   String get contentType => headers.get('content-type') ?? 'application/octet-stream';
 
