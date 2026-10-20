@@ -45,6 +45,20 @@ class NativeBridge {
     }
   }
 
+  static Future<bool> installCaCert(
+      Uint8List bytes, {String name = 'VersSuite CA'}) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'installCaCert',
+        {'bytes': bytes, 'name': name},
+      );
+      return result ?? false;
+    } catch (e) {
+      print('[NativeBridge] installCaCert error: $e');
+      return false;
+    }
+  }
+
   static Future<bool> acquireWakeLock() async {
     try {
       await _channel.invokeMethod('acquireWakeLock');

@@ -13,6 +13,7 @@ import android.os.Environment
 import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.security.KeyChain
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import androidx.webkit.ProxyConfig
@@ -54,6 +55,16 @@ class MainActivity : FlutterActivity() {
                     if (bytes != null) {
                         val success = saveBytesToDownloads(bytes, filename)
                         result.success(success)
+                    } else {
+                        result.error("INVALID_ARG", "bytes is null", null)
+                    }
+                }
+                "installCaCert" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val name = call.argument<String>("name") ?: "VersSuite CA"
+                    if (bytes != null) {
+                        val ok = installCaCert(bytes, name)
+                        result.success(ok)
                     } else {
                         result.error("INVALID_ARG", "bytes is null", null)
                     }
@@ -137,6 +148,21 @@ class MainActivity : FlutterActivity() {
     private fun stopProxyService() {
         val intent = Intent(this, ProxyForegroundService::class.java)
         stopService(intent)
+    }
+
+    private fun installCaCert(bytes: ByteArray, name: String): Boolean {
+        return try {
+            val intent = KeyChain.createInstallIntent().apply {
+                putExtra(KeyChain.EXTRA_CERTIFICATE, bytes)
+                putExtra(KeyChain.EXTRA_NAME, name)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
     private fun saveBytesToDownloads(bytes: ByteArray, filename: String): Boolean {

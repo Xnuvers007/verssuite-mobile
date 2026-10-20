@@ -40,7 +40,16 @@ class ProxyConfig {
     this.userAgentPreset = 'default',
     this.customForwardedIp = '',
     this.javascriptEnabled = true,
-  }) : excludeHosts = excludeHosts ?? [];
+  }) : excludeHosts = excludeHosts ?? defaultExcludeHosts;
+
+  static List<String> get defaultExcludeHosts => [
+        '*.google.com',
+        'google.com',
+        '*.gstatic.com',
+        '*.googleapis.com',
+        '*.gvt1.com',
+        '*.gvt2.com',
+      ];
 
   static const String uaDesktopWindows =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -109,11 +118,14 @@ class ProxyConfig {
   }
 
   bool shouldExclude(String host) {
+    final lowerHost = host.toLowerCase().trim();
     for (final pattern in excludeHosts) {
-      if (pattern.startsWith('*.')) {
-        if (host.endsWith(pattern.substring(1))) return true;
+      final p = pattern.toLowerCase().trim();
+      if (p.startsWith('*.')) {
+        final suffix = p.substring(2);
+        if (lowerHost == suffix || lowerHost.endsWith('.$suffix')) return true;
       } else {
-        if (host == pattern) return true;
+        if (lowerHost == p) return true;
       }
     }
     return false;
@@ -139,21 +151,26 @@ class ProxyConfig {
         'javascriptEnabled': javascriptEnabled,
       };
 
-  factory ProxyConfig.fromJson(Map<String, dynamic> json) => ProxyConfig(
-        port: json['port'] ?? 8080,
-        bindAddress: json['bindAddress'] ?? '0.0.0.0',
-        httpsInterception: json['httpsInterception'] ?? true,
-        connectionTimeout: json['connectionTimeout'] ?? 30,
-        maxBodySize: json['maxBodySize'] ?? 10 * 1024 * 1024,
-        excludeHosts: (json['excludeHosts'] as List?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [],
-        inAppBrowserAutoProxy: json['inAppBrowserAutoProxy'] ?? true,
-        bypassSslWarnings: json['bypassSslWarnings'] ?? true,
-        stripAcceptEncoding: json['stripAcceptEncoding'] ?? false,
-        debugLogging: json['debugLogging'] ?? false,
-        maxFlowHistory: json['maxFlowHistory'] ?? 500,
+  factory ProxyConfig.fromJson(Map<String, dynamic> json) {
+    final rawExclude = (json['excludeHosts'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final effectiveExclude = (rawExclude == null || rawExclude.isEmpty)
+        ? defaultExcludeHosts
+        : rawExclude;
+
+    return ProxyConfig(
+      port: json['port'] ?? 8080,
+      bindAddress: json['bindAddress'] ?? '0.0.0.0',
+      httpsInterception: json['httpsInterception'] ?? true,
+      connectionTimeout: json['connectionTimeout'] ?? 30,
+      maxBodySize: json['maxBodySize'] ?? 10 * 1024 * 1024,
+      excludeHosts: effectiveExclude,
+      inAppBrowserAutoProxy: json['inAppBrowserAutoProxy'] ?? true,
+      bypassSslWarnings: json['bypassSslWarnings'] ?? true,
+      stripAcceptEncoding: json['stripAcceptEncoding'] ?? false,
+      debugLogging: json['debugLogging'] ?? false,
+      maxFlowHistory: json['maxFlowHistory'] ?? 500,
         customUserAgent: json['customUserAgent'] ?? '',
         searchEngine: json['searchEngine'] ?? 'google',
         customSearchEngineUrl:

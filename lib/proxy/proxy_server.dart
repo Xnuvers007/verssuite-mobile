@@ -189,10 +189,23 @@ class ProxyServer {
 
   /// Handle CONNECT tunneling (for HTTPS).
   Future<void> _handleConnect(HttpRequest clientRequest) async {
-    final target = clientRequest.requestedUri.toString();
-    final parts = target.contains(':') ? target.split(':') : [target, '443'];
-    final host = parts[0];
-    final port = int.tryParse(parts.length > 1 ? parts[1] : '443') ?? 443;
+    String target = clientRequest.headers.value('host') ?? clientRequest.uri.toString();
+    if (target.startsWith('http://') || target.startsWith('https://')) {
+      final u = Uri.tryParse(target);
+      if (u != null && u.host.isNotEmpty) {
+        target = '${u.host}:${u.port != 0 ? u.port : 443}';
+      }
+    }
+    final lastColon = target.lastIndexOf(':');
+    final String host;
+    final int port;
+    if (lastColon != -1 && !target.endsWith(']')) {
+      host = target.substring(0, lastColon).replaceAll('[', '').replaceAll(']', '').trim();
+      port = int.tryParse(target.substring(lastColon + 1).trim()) ?? 443;
+    } else {
+      host = target.replaceAll('[', '').replaceAll(']', '').trim();
+      port = 443;
+    }
 
     // If HTTPS interception is disabled or host is excluded, tunnel directly
     if (ca == null ||
@@ -216,6 +229,25 @@ class ProxyServer {
       final clientSocket = await clientRequest.response.detachSocket();
       clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       await clientSocket.flush();
+
+      // Log direct tunnel in history so user sees active traffic
+      final flow = HttpFlow(
+        id: 'flow_${_flowCounter++}',
+        request: ProxyRequest(
+          method: 'CONNECT',
+          url: '$host:$port',
+          headers: HttpHeaders(),
+        ),
+        response: ProxyResponse(
+          statusCode: 200,
+          statusText: 'Connection Established (Direct Tunnel)',
+          headers: HttpHeaders(),
+          body: Uint8List(0),
+        ),
+        state: FlowState.completed,
+        isHttps: true,
+      );
+      onFlow(flow);
 
       upstream.listen(
         clientSocket.add,
@@ -259,6 +291,29 @@ class ProxyServer {
       await _handleMitmConnection(secureClient, host, port);
     } catch (e) {
       print('[ProxyServer] MITM error for $host: $e');
+      final flow = HttpFlow(
+        id: 'flow_${_flowCounter++}',
+        request: ProxyRequest(
+          method: 'CONNECT',
+          url: 'https://$host:$port',
+          headers: HttpHeaders(),
+        ),
+        response: ProxyResponse(
+          statusCode: 502,
+          statusText: 'MITM Handshake Failed',
+          headers: HttpHeaders(),
+          body: Uint8List.fromList(utf8.encode(
+            'MITM Handshake Error: $e\n\n'
+            'Penyebab umum: Sertifikat CA VersSuite belum diinstal/dipercaya di HP Android Anda, atau situs memiliki SSL Pinning (seperti google.com).\n'
+            'Solusi:\n'
+            '1. Pasang Sertifikat CA lewat menu Pengaturan VersSuite ➔ Pasang Sertifikat CA ke Android.\n'
+            '2. Atau matikan switch "Intersepsi HTTPS" untuk mode Direct Tunnel tanpa error.',
+          )),
+        ),
+        state: FlowState.error,
+        isHttps: true,
+      );
+      onFlow(flow);
       try {
         clientSocket?.close();
       } catch (_) {}
@@ -377,6 +432,11 @@ class ProxyServer {
         });
 
         final respBody = await _readStream(upstreamResponse);
+
+        // Strip hop-by-hop headers & fix chunked / content-length framing
+        respHeaders.stripHopByHop();
+        respHeaders.remove('transfer-encoding');
+        respHeaders.set('content-length', respBody.length.toString());
 
         flow.response = ProxyResponse(
           statusCode: upstreamResponse.statusCode,

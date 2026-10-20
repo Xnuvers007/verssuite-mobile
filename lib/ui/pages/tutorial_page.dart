@@ -151,31 +151,66 @@ class _CertInstallTab extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, color: Colors.white70),
               ),
               const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  final ok = await appState.exportCA();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(ok
-                            ? (isIndonesian
-                                ? '✅ Sertifikat diekspor ke folder Downloads (verssuite_ca.pem)!'
-                                : '✅ Certificate exported to Downloads (verssuite_ca.pem)!')
-                            : 'Gagal mengekspor sertifikat'),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final ok = await appState.installCA();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(ok
+                                  ? (isIndonesian
+                                      ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
+                                      : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
+                                  : 'Gagal membuka installer sertifikat Android.'),
+                              backgroundColor: const Color(0xFF00D4AA),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.security, size: 16),
+                      label: Text(
+                        isIndonesian ? 'Pasang Langsung (1-Tap)' : 'Install CA (1-Tap)',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.download, size: 16),
-                label: Text(
-                  isIndonesian ? 'Ekspor Sertifikat Sekarang' : 'Export CA Certificate Now',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF12122A),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00D4AA),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await appState.exportCA();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(ok
+                                ? (isIndonesian
+                                    ? '✅ Sertifikat diekspor ke folder Downloads (verssuite_ca.pem)!'
+                                    : '✅ Certificate exported to Downloads (verssuite_ca.pem)!')
+                                : 'Gagal mengekspor sertifikat'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.download, size: 16),
+                    label: Text(
+                      isIndonesian ? 'Ekspor PEM' : 'Export PEM',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white70),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

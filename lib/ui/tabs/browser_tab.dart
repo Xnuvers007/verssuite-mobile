@@ -84,7 +84,21 @@ class BrowserTabState extends State<BrowserTab> {
           onWebResourceError: (error) {
             debugPrint('[InAppBrowser] Resource error: ${error.description}');
             if (mounted &&
+                (error.description.contains('net::ERR_TUNNEL_CONNECTION_FAILED') ||
+                 error.description.contains('net::ERR_PROXY_CONNECTION_FAILED'))) {
+              CyberBanner.show(
+                context,
+                type: CyberBannerType.warning,
+                title: '🔒 Tunnel Proksi Ditolak (ERR_TUNNEL)',
+                message: 'Sertifikat CA belum terpasang di Android atau situs memiliki SSL Pinning. Ketuk Pasang CA atau matikan Intersepsi HTTPS.',
+                actionLabel: 'Pasang CA',
+                onAction: () async {
+                  await appState.installCA();
+                },
+              );
+            } else if (mounted &&
                 (error.description.contains('net::ERR_INTERNET_DISCONNECTED') ||
+                 error.description.contains('net::ERR_NAME_NOT_RESOLATED') ||
                  error.description.contains('net::ERR_NAME_NOT_RESOLVED') ||
                  error.errorType == WebResourceErrorType.hostLookup ||
                  error.errorType == WebResourceErrorType.connect)) {

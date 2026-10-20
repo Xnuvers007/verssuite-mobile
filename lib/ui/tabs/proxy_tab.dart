@@ -396,6 +396,39 @@ class _ConfigInfoCard extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final appState = Provider.of<AppState>(context, listen: false);
+                final ok = await appState.installCA();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok
+                          ? (isIndonesian
+                              ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
+                              : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
+                          : 'Gagal membuka installer sertifikat Android.'),
+                      backgroundColor: const Color(0xFF00D4AA),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.security, size: 16),
+              label: Text(
+                isIndonesian
+                    ? 'Pasang Sertifikat CA ke Android (Wajib untuk HTTPS)'
+                    : 'Install CA Certificate to Android (Required for HTTPS)',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00D4AA),
+                foregroundColor: Colors.black,
+                minimumSize: const Size(double.infinity, 38),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
           ],
         ),
       ),
@@ -411,6 +444,7 @@ class _CAStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ready = status == 'Ready';
+    final isIndonesian = l.locale.languageCode == 'id';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -451,6 +485,33 @@ class _CAStatusCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (ready)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final appState = Provider.of<AppState>(context, listen: false);
+                  final ok = await appState.installCA();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(ok
+                            ? (isIndonesian
+                                ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
+                                : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
+                            : 'Gagal membuka installer sertifikat Android.'),
+                        backgroundColor: const Color(0xFF00D4AA),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.install_mobile, size: 16),
+                label: Text(isIndonesian ? 'Pasang CA' : 'Install CA'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF00D4AA),
+                  side: const BorderSide(color: Color(0xFF00D4AA)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+              ),
           ],
         ),
       ),

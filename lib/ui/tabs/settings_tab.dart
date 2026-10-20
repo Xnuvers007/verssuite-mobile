@@ -162,6 +162,40 @@ class SettingsTab extends StatelessWidget {
                     subtitle: appState.caStatus,
                   ),
                   const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final ok = await appState.installCA();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(ok
+                                  ? (localeState.locale.languageCode == 'id'
+                                      ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
+                                      : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
+                                  : 'Gagal membuka installer sertifikat Android.'),
+                              backgroundColor: const Color(0xFF00D4AA),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.security, size: 18),
+                      label: Text(
+                        localeState.locale.languageCode == 'id'
+                            ? 'Pasang Sertifikat CA ke Android'
+                            : 'Install CA Certificate to Android',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00D4AA),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(

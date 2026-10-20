@@ -117,6 +117,11 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<bool> installCA() async {
+    if (_ca == null || !_ca!.ready) return false;
+    return await NativeBridge.installCaCert(_ca!.caCertBytes);
+  }
+
   // ─── Proxy Lifecycle ───────────────────────────────────────
 
   Future<bool> startProxy() async {
