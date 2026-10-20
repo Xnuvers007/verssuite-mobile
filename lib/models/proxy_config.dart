@@ -45,8 +45,11 @@ class ProxyConfig {
   static List<String> get defaultExcludeHosts => [
         '*.google.com',
         'google.com',
+        '*.google.co.id',
+        'google.co.id',
         '*.gstatic.com',
         '*.googleapis.com',
+        '*.googleusercontent.com',
         '*.gvt1.com',
         '*.gvt2.com',
       ];
@@ -119,6 +122,15 @@ class ProxyConfig {
 
   bool shouldExclude(String host) {
     final lowerHost = host.toLowerCase().trim();
+    if (lowerHost == 'google.com' ||
+        lowerHost.endsWith('.google.com') ||
+        lowerHost == 'google.co.id' ||
+        lowerHost.endsWith('.google.co.id') ||
+        lowerHost.endsWith('.gstatic.com') ||
+        lowerHost.endsWith('.googleapis.com') ||
+        lowerHost.endsWith('.googleusercontent.com')) {
+      return true;
+    }
     for (final pattern in excludeHosts) {
       final p = pattern.toLowerCase().trim();
       if (p.startsWith('*.')) {

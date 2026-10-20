@@ -226,7 +226,7 @@ class ProxyServer {
       final upstream = await Socket.connect(host, port,
           timeout: Duration(seconds: config.connectionTimeout));
 
-      final clientSocket = await clientRequest.response.detachSocket();
+      final clientSocket = await clientRequest.response.detachSocket(writeHeaders: false);
       clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       await clientSocket.flush();
 
@@ -273,7 +273,7 @@ class ProxyServer {
       HttpRequest clientRequest, String host, int port) async {
     Socket? clientSocket;
     try {
-      clientSocket = await clientRequest.response.detachSocket();
+      clientSocket = await clientRequest.response.detachSocket(writeHeaders: false);
       clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       await clientSocket.flush();
 
