@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/http_models.dart';
 import '../../state/app_state.dart';
+import '../widgets/cyber_banner.dart';
 
 class InterceptTab extends StatefulWidget {
   const InterceptTab({super.key});
@@ -56,7 +57,14 @@ class _InterceptTabState extends State<InterceptTab> {
                   ),
                   child: InkWell(
                     onTap: () {
-                      appState.setInterceptEnabled(!appState.interceptEnabled);
+                      final next = !appState.interceptEnabled;
+                      appState.setInterceptEnabled(next);
+                      CyberBanner.show(
+                        context,
+                        type: next
+                            ? CyberBannerType.interceptActive
+                            : CyberBannerType.interceptInactive,
+                      );
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

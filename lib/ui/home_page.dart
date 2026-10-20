@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
-import '../state/app_state.dart';
+import '../services/connectivity_service.dart';
 import '../services/update_service.dart';
+import '../state/app_state.dart';
 import '../state/native_bridge.dart';
 import 'dialogs/update_dialog.dart';
 import 'pages/tutorial_page.dart';
@@ -14,6 +16,7 @@ import 'tabs/history_tab.dart';
 import 'tabs/intercept_tab.dart';
 import 'tabs/repeater_tab.dart';
 import 'tabs/settings_tab.dart';
+import 'widgets/cyber_banner.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,15 +29,57 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   DateTime? _lastBackPressTime;
   final GlobalKey<BrowserTabState> _browserKey = GlobalKey<BrowserTabState>();
+  StreamSubscription<bool>? _connectivitySub;
 
   @override
   void initState() {
     super.initState();
-    // Init CA on startup and check for updates quietly in background
+    // Init CA on startup, check updates, and monitor internet connectivity
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().initCA();
       _checkForUpdatesQuietly();
+      _initConnectivityMonitoring();
     });
+  }
+
+  void _initConnectivityMonitoring() {
+    final service = ConnectivityService();
+    service.startMonitoring();
+    _connectivitySub = service.onConnectivityChanged.listen((isOnline) {
+      if (!mounted) return;
+      if (!isOnline) {
+        CyberBanner.show(
+          context,
+          type: CyberBannerType.offline,
+          title: '⚠️ Internet Terputus (Offline)',
+          message: 'Koneksi Wi-Fi/Data mati. Permintaan proxy upstream akan gagal.',
+          actionLabel: 'Detail',
+          onAction: () {
+            CyberBanner.showAlertDialog(
+              context,
+              type: CyberBannerType.offline,
+              title: 'Koneksi Internet Terputus',
+              message:
+                  'Perangkat Anda terdeteksi tidak memiliki koneksi internet aktif. Pastikan Wi-Fi atau data seluler aktif agar VersSuite Mobile dapat meneruskan request web ke server tujuan.',
+              confirmLabel: 'Mengerti',
+            );
+          },
+        );
+      } else {
+        CyberBanner.show(
+          context,
+          type: CyberBannerType.online,
+          title: '🌐 Internet Terhubung Kembali',
+          message: 'Koneksi jaringan aktif. Proxy siap meneruskan lalu lintas web.',
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySub?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkForUpdatesQuietly() async {

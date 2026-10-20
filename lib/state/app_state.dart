@@ -17,6 +17,8 @@ class AppState extends ChangeNotifier {
 
   ProxyServer? _server;
   bool get proxyRunning => _server?.running ?? false;
+  String? _lastError;
+  String? get lastError => _lastError;
 
   final List<HttpFlow> _flows = [];
   List<HttpFlow> get flows => List.unmodifiable(_flows);
@@ -117,27 +119,36 @@ class AppState extends ChangeNotifier {
 
   // ─── Proxy Lifecycle ───────────────────────────────────────
 
-  Future<void> startProxy() async {
-    if (proxyRunning) return;
+  Future<bool> startProxy() async {
+    if (proxyRunning) return true;
+    _lastError = null;
 
-    if (_ca == null || !_ca!.ready) {
-      await initCA();
+    try {
+      if (_ca == null || !_ca!.ready) {
+        await initCA();
+      }
+
+      _server = ProxyServer(
+        config: _config,
+        ca: _config.httpsInterception ? _ca : null,
+        onFlow: _onFlowUpdate,
+        onIntercept: _interceptEnabled ? _onIntercept : null,
+      );
+
+      await _server!.start();
+      await NativeBridge.startForegroundService();
+      await NativeBridge.acquireWakeLock();
+      if (_config.inAppBrowserAutoProxy) {
+        await NativeBridge.setWebViewProxy(port: _config.port, enabled: true);
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = e.toString();
+      _server = null;
+      notifyListeners();
+      return false;
     }
-
-    _server = ProxyServer(
-      config: _config,
-      ca: _config.httpsInterception ? _ca : null,
-      onFlow: _onFlowUpdate,
-      onIntercept: _interceptEnabled ? _onIntercept : null,
-    );
-
-    await _server!.start();
-    await NativeBridge.startForegroundService();
-    await NativeBridge.acquireWakeLock();
-    if (_config.inAppBrowserAutoProxy) {
-      await NativeBridge.setWebViewProxy(port: _config.port, enabled: true);
-    }
-    notifyListeners();
   }
 
   Future<void> stopProxy() async {

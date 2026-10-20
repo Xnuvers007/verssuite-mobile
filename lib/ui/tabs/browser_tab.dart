@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/proxy_config.dart';
 import '../../state/app_state.dart';
+import '../widgets/cyber_banner.dart';
 
 /// Full-featured in-app browser with custom UA, IP simulation, search engines,
 /// and browser controls matching modern desktop & mobile inspection tools.
@@ -81,6 +82,20 @@ class BrowserTabState extends State<BrowserTab> {
           },
           onWebResourceError: (error) {
             debugPrint('[InAppBrowser] Resource error: ${error.description}');
+            if (mounted &&
+                (error.description.contains('net::ERR_INTERNET_DISCONNECTED') ||
+                 error.description.contains('net::ERR_NAME_NOT_RESOLVED') ||
+                 error.errorType == WebResourceErrorType.hostLookup ||
+                 error.errorType == WebResourceErrorType.connect)) {
+              CyberBanner.show(
+                context,
+                type: CyberBannerType.offline,
+                title: '⚠️ Gagal Memuat Halaman (Offline)',
+                message: 'Tidak ada koneksi internet atau DNS gagal.',
+                actionLabel: 'Muat Ulang',
+                onAction: () => _controller.reload(),
+              );
+            }
           },
           onSslAuthError: (sslError) {
             // Auto-bypass self-signed MITM certificate warnings if configured

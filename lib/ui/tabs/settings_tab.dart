@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/connectivity_service.dart';
 import '../../services/update_service.dart';
 import '../../state/app_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/native_bridge.dart';
 import '../dialogs/update_dialog.dart';
 import '../pages/tutorial_page.dart';
+import '../widgets/cyber_banner.dart';
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -353,6 +355,12 @@ class SettingsTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+
+          // ─── Simulasi & Pengujian Event (User Testing Sandbox) ──
+          const _SectionHeader(title: 'Testing & Simulasi Event'),
+          const SizedBox(height: 8),
+          const _EventSimulatorCard(),
           const SizedBox(height: 16),
 
           // ─── Pembaruan Aplikasi (App Update) ──────────────
@@ -931,4 +939,254 @@ class _UpdateCheckCardState extends State<_UpdateCheckCard> {
     );
   }
 }
+
+class _EventSimulatorCard extends StatelessWidget {
+  const _EventSimulatorCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.4)),
+                  ),
+                  child: const Icon(Icons.science_rounded, color: Color(0xFF00E5FF), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Event & Alert Simulator',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Uji coba tampilan pop-up, modal dialog, dan toast untuk skenario testing.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Grid of Simulation Buttons
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // 1. Offline Simulation
+                _SimulateButton(
+                  icon: Icons.wifi_off_rounded,
+                  label: 'Simulasi Offline',
+                  color: const Color(0xFFFF5252),
+                  onTap: () {
+                    ConnectivityService().simulateOffline();
+                    CyberBanner.showAlertDialog(
+                      context,
+                      type: CyberBannerType.offline,
+                      title: 'Koneksi Internet Terputus',
+                      message:
+                          'Simulasi User Testing: Internet offline terdeteksi. Proxy upstream akan menahan request hingga internet kembali menyala.',
+                      confirmLabel: 'OK (Tutup)',
+                    );
+                  },
+                ),
+
+                // 2. Online Simulation
+                _SimulateButton(
+                  icon: Icons.wifi_rounded,
+                  label: 'Simulasi Online',
+                  color: const Color(0xFF00E676),
+                  onTap: () {
+                    ConnectivityService().simulateOnline();
+                  },
+                ),
+
+                // 3. Port Conflict Simulation
+                _SimulateButton(
+                  icon: Icons.warning_amber_rounded,
+                  label: 'Konflik Port 8080',
+                  color: const Color(0xFFFF9100),
+                  onTap: () {
+                    CyberBanner.show(
+                      context,
+                      type: CyberBannerType.portConflict,
+                      title: '⚠️ Konflik Port 8080',
+                      message: 'Port 8080 sedang digunakan oleh proses lain (Address in use).',
+                      actionLabel: 'Ganti Port',
+                      onAction: () {
+                        CyberBanner.showAlertDialog(
+                          context,
+                          type: CyberBannerType.portConflict,
+                          title: 'Ubah Port Proksi',
+                          message: 'Untuk menghindari konflik, ubah konfigurasi port di menu Server Settings ke nomor 8081, 8888, atau 9090.',
+                          confirmLabel: 'Siap',
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                // 4. CA Warning Simulation
+                _SimulateButton(
+                  icon: Icons.security_rounded,
+                  label: 'Peringatan CA Cert',
+                  color: const Color(0xFF00E5FF),
+                  onTap: () {
+                    CyberBanner.show(
+                      context,
+                      type: CyberBannerType.caWarning,
+                      title: 'ℹ️ Sertifikat CA Belum Ada',
+                      message: 'Instal CA cert agar lalu lintas HTTPS tidak menampilkan peringatan SSL.',
+                      actionLabel: 'Buka Panduan',
+                      onAction: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const TutorialPage()),
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                // 5. Intercept Mode Simulation
+                _SimulateButton(
+                  icon: Icons.pause_circle_rounded,
+                  label: 'Intersep Paused',
+                  color: const Color(0xFFB388FF),
+                  onTap: () {
+                    CyberBanner.show(
+                      context,
+                      type: CyberBannerType.interceptActive,
+                      title: '⏸️ Mode Intersep Aktif',
+                      message: 'Permintaan web ditahan. Buka tab Intersep untuk Forward/Drop.',
+                    );
+                  },
+                ),
+
+                // 6. Flow Limit Simulation
+                _SimulateButton(
+                  icon: Icons.cleaning_services_rounded,
+                  label: 'Batas Flow (500)',
+                  color: const Color(0xFF40C4FF),
+                  onTap: () {
+                    CyberBanner.show(
+                      context,
+                      type: CyberBannerType.flowLimit,
+                      title: '🧹 Batas 500 Flow Tercapai',
+                      message: 'Entri paling lama telah otomatis dibersihkan agar performa HP tetap lancar.',
+                    );
+                  },
+                ),
+
+                // 7. Preview Pop-up Update
+                _SimulateButton(
+                  icon: Icons.system_update_rounded,
+                  label: 'Preview Pop-up Update',
+                  color: const Color(0xFF00D4AA),
+                  onTap: () async {
+                    final deviceAbi = await NativeBridge.getDeviceAbi();
+                    final currentVer = await NativeBridge.getAppVersion();
+                    if (context.mounted) {
+                      await UpdateDialog.show(
+                        context,
+                        updateInfo: const AppUpdateInfo(
+                          tagName: 'v1.0.9-preview',
+                          title: 'VersSuite Mobile v1.0.9 (User Testing Preview)',
+                          changelog: '### 🚀 Simulasi Fitur Update\n* Peningkatan kecepatan MITM proxy engine\n* Dukungan penuh Android 15\n* Auto-reconnect listener saat internet kembali online',
+                          htmlUrl: 'https://github.com/Xnuvers007/verssuite-mobile/releases',
+                          publishedAt: '2026-10-20',
+                          assets: [
+                            UpdateAsset(
+                              name: 'verssuite-mobile-v1.0.9-arm64-v8a.apk',
+                              downloadUrl: 'https://github.com/Xnuvers007/verssuite-mobile/releases',
+                              size: 12582912,
+                              arch: 'arm64-v8a',
+                            ),
+                          ],
+                        ),
+                        currentVersion: currentVer,
+                        deviceAbi: deviceAbi,
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SimulateButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SimulateButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 

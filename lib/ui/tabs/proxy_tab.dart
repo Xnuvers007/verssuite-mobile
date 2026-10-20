@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../pages/tutorial_page.dart';
+import '../widgets/cyber_banner.dart';
 
 class ProxyTab extends StatelessWidget {
   const ProxyTab({super.key});
@@ -55,8 +56,41 @@ class ProxyTab extends StatelessWidget {
                   onPressed: () async {
                     if (running) {
                       await appState.stopProxy();
+                      if (context.mounted) {
+                        CyberBanner.show(
+                          context,
+                          type: CyberBannerType.info,
+                          title: '🛑 Proxy Dinonaktifkan',
+                          message: 'Layanan proxy telah dihentikan.',
+                        );
+                      }
                     } else {
-                      await appState.startProxy();
+                      final ok = await appState.startProxy();
+                      if (!ok && context.mounted) {
+                        CyberBanner.show(
+                          context,
+                          type: CyberBannerType.portConflict,
+                          title: '⚠️ Gagal Memulai Proxy',
+                          message: 'Port ${config.port} bermasalah atau sedang digunakan: ${appState.lastError}',
+                          actionLabel: 'Detail',
+                          onAction: () {
+                            CyberBanner.showAlertDialog(
+                              context,
+                              type: CyberBannerType.portConflict,
+                              title: 'Konflik Port ${config.port}',
+                              message: 'Port ${config.port} tidak dapat dibuka karena sedang dipakai oleh aplikasi lain atau izin socket ditolak. Silakan ganti nomor port di tab Pengaturan.',
+                              confirmLabel: 'Tutup',
+                            );
+                          },
+                        );
+                      } else if (ok && context.mounted) {
+                        CyberBanner.show(
+                          context,
+                          type: CyberBannerType.success,
+                          title: '🚀 Proxy Aktif',
+                          message: 'Mendengarkan pada ${config.bindAddress}:${config.port}',
+                        );
+                      }
                     }
                   },
                 ),

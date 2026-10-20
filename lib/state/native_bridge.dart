@@ -117,4 +117,13 @@ class NativeBridge {
       return '1.0.0';
     }
   }
+
+  static Future<bool> isNetworkConnected() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('isNetworkConnected');
+      return res ?? true;
+    } catch (e) {
+      return true;
+    }
+  }
 }

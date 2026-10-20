@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -91,6 +93,9 @@ class MainActivity : FlutterActivity() {
                 }
                 "getAppVersion" -> {
                     result.success(getAppVersion())
+                }
+                "isNetworkConnected" -> {
+                    result.success(isNetworkConnected())
                 }
                 else -> result.notImplemented()
             }
@@ -227,6 +232,23 @@ class MainActivity : FlutterActivity() {
             pInfo.versionName ?: "1.0.0"
         } catch (e: Exception) {
             "1.0.0"
+        }
+    }
+
+    private fun isNetworkConnected(): Boolean {
+        return try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val network = cm.activeNetwork ?: return false
+                val capabilities = cm.getNetworkCapabilities(network) ?: return false
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            } else {
+                @Suppress("DEPRECATION")
+                val ni = cm.activeNetworkInfo
+                ni?.isConnected == true
+            }
+        } catch (e: Exception) {
+            true
         }
     }
 }
