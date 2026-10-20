@@ -10,7 +10,9 @@ import android.os.Build
 import android.os.Environment
 import android.os.PowerManager
 import android.provider.MediaStore
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
@@ -74,6 +76,21 @@ class MainActivity : FlutterActivity() {
                     val enabled = call.argument<Boolean>("enabled") ?: true
                     setWebViewProxy(host, port, enabled)
                     result.success(true)
+                }
+                "installApk" -> {
+                    val filePath = call.argument<String>("filePath")
+                    if (filePath != null) {
+                        val ok = installApk(filePath)
+                        result.success(ok)
+                    } else {
+                        result.error("INVALID_ARG", "filePath is null", null)
+                    }
+                }
+                "getDeviceAbi" -> {
+                    result.success(getDeviceAbi())
+                }
+                "getAppVersion" -> {
+                    result.success(getAppVersion())
                 }
                 else -> result.notImplemented()
             }
@@ -153,5 +170,63 @@ class MainActivity : FlutterActivity() {
             if (it.isHeld) it.release()
         }
         wakeLock = null
+    }
+
+    private fun installApk(filePath: String): Boolean {
+        return try {
+            val file = File(filePath)
+            if (!file.exists()) return false
+
+            val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                FileProvider.getUriForFile(
+                    this,
+                    "${applicationContext.packageName}.fileprovider",
+                    file
+                )
+            } else {
+                Uri.fromFile(file)
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!packageManager.canRequestPackageInstalls()) {
+                    val settingsIntent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:$packageName")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(settingsIntent)
+                }
+            }
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun getDeviceAbi(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
+        } else {
+            @Suppress("DEPRECATION")
+            Build.CPU_ABI ?: "arm64-v8a"
+        }
+    }
+
+    private fun getAppVersion(): String {
+        return try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            pInfo.versionName ?: "1.0.0"
+        } catch (e: Exception) {
+            "1.0.0"
+        }
     }
 }

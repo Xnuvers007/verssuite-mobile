@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
+import '../services/update_service.dart';
+import '../state/native_bridge.dart';
+import 'dialogs/update_dialog.dart';
 import 'pages/tutorial_page.dart';
 import 'tabs/proxy_tab.dart';
 import 'tabs/browser_tab.dart';
@@ -27,10 +30,29 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Init CA on startup
+    // Init CA on startup and check for updates quietly in background
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().initCA();
+      _checkForUpdatesQuietly();
     });
+  }
+
+  Future<void> _checkForUpdatesQuietly() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+    try {
+      final currentVer = await NativeBridge.getAppVersion();
+      final deviceAbi = await NativeBridge.getDeviceAbi();
+      final latest = await UpdateService.checkForUpdate();
+      if (latest != null && mounted) {
+        await UpdateDialog.show(
+          context,
+          updateInfo: latest,
+          currentVersion: currentVer,
+          deviceAbi: deviceAbi,
+        );
+      }
+    } catch (_) {}
   }
 
   void _handleBackPress(BuildContext context, AppLocalizations l) {

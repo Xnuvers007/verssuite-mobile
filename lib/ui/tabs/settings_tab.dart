@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/update_service.dart';
 import '../../state/app_state.dart';
 import '../../state/locale_state.dart';
 import '../../state/native_bridge.dart';
+import '../dialogs/update_dialog.dart';
 import '../pages/tutorial_page.dart';
 
 class SettingsTab extends StatelessWidget {
@@ -351,6 +353,12 @@ class SettingsTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+
+          // ─── Pembaruan Aplikasi (App Update) ──────────────
+          _SectionHeader(title: l.tr('check_update')),
+          const SizedBox(height: 8),
+          const _UpdateCheckCard(),
           const SizedBox(height: 16),
 
           // ─── About ────────────────────────────────────────
@@ -750,3 +758,177 @@ class _SocialTile extends StatelessWidget {
     );
   }
 }
+
+class _UpdateCheckCard extends StatefulWidget {
+  const _UpdateCheckCard();
+
+  @override
+  State<_UpdateCheckCard> createState() => _UpdateCheckCardState();
+}
+
+class _UpdateCheckCardState extends State<_UpdateCheckCard> {
+  bool _checking = false;
+  String? _statusMessage;
+  bool? _isUpToDate;
+  String _currentVer = '1.0.0';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentVersion();
+  }
+
+  Future<void> _loadCurrentVersion() async {
+    final ver = await NativeBridge.getAppVersion();
+    if (mounted) {
+      setState(() => _currentVer = ver);
+    }
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
+    setState(() {
+      _checking = true;
+      _statusMessage = null;
+    });
+
+    try {
+      final currentVer = await NativeBridge.getAppVersion();
+      final deviceAbi = await NativeBridge.getDeviceAbi();
+      final latest = await UpdateService.getLatestReleaseInfo();
+
+      if (!mounted) return;
+
+      if (latest != null && UpdateService.isNewer(latest.tagName, currentVer)) {
+        setState(() {
+          _checking = false;
+          _isUpToDate = false;
+          _statusMessage = 'Update tersedia: ${latest.tagName}';
+        });
+
+        if (context.mounted) {
+          await UpdateDialog.show(
+            context,
+            updateInfo: latest,
+            currentVersion: currentVer,
+            deviceAbi: deviceAbi,
+          );
+        }
+      } else {
+        setState(() {
+          _checking = false;
+          _isUpToDate = true;
+          _statusMessage = 'Versi terkini: v$currentVer (Sudah Terbaru ✅)';
+        });
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Aplikasi Anda sudah versi terbaru (v$currentVer) ✅'),
+              backgroundColor: const Color(0xFF00D4AA),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _statusMessage = 'Gagal memeriksa pembaruan: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: _isUpToDate == false
+              ? const Color(0xFF00D4AA).withValues(alpha: 0.6)
+              : const Color(0xFF6C63FF).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.autorenew_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.tr('check_update'),
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _statusMessage ?? '${l.tr('current_version')}: v$_currentVer',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isUpToDate == true
+                              ? const Color(0xFF00D4AA)
+                              : Colors.white60,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _checking ? null : () => _checkUpdate(context),
+                    icon: _checking
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(_checking ? l.tr('checking_update') : l.tr('check_update')),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: () => NativeBridge.openUrl('https://github.com/Xnuvers007/verssuite-mobile/releases'),
+                  icon: const Icon(Icons.open_in_browser, size: 20),
+                  tooltip: 'GitHub Releases',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

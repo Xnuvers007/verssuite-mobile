@@ -89,4 +89,32 @@ class NativeBridge {
       return false;
     }
   }
+
+  static Future<bool> installApk(String filePath) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('installApk', {'filePath': filePath});
+      return res ?? false;
+    } catch (e) {
+      print('[NativeBridge] installApk error: $e');
+      return false;
+    }
+  }
+
+  static Future<String> getDeviceAbi() async {
+    try {
+      final res = await _channel.invokeMethod<String>('getDeviceAbi');
+      return res ?? 'arm64-v8a';
+    } catch (e) {
+      return 'arm64-v8a';
+    }
+  }
+
+  static Future<String> getAppVersion() async {
+    try {
+      final res = await _channel.invokeMethod<String>('getAppVersion');
+      return res ?? '1.0.0';
+    } catch (e) {
+      return '1.0.0';
+    }
+  }
 }
