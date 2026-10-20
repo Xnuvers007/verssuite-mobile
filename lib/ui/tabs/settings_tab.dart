@@ -293,7 +293,29 @@ class SettingsTab extends StatelessWidget {
             ),
           ),
           // ─── Developer Options ─────────────────────────────
-          _SectionHeader(title: l.tr('developer_options')),
+          Row(
+            children: [
+              _SectionHeader(title: l.tr('developer_options')),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.4)),
+                ),
+                child: const Text(
+                  'DEV / ADVANCED',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: Color(0xFF6C63FF),
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Card(
             child: Padding(
@@ -388,6 +410,53 @@ class SettingsTab extends StatelessWidget {
                           appState.saveConfig();
                         }
                       },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  // Android System Developer Options Helper
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C63FF).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.developer_mode, size: 20, color: Color(0xFF6C63FF)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                localeState.locale.languageCode == 'id'
+                                    ? 'Opsi Pengembang Android OS'
+                                    : 'Android OS Developer Options',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                localeState.locale.languageCode == 'id'
+                                    ? 'Untuk mengaktifkan mode pengembang di HP Anda: Buka Pengaturan HP ➔ Tentang Ponsel ➔ Ketuk "Nomor Versi / Build Number" sebanyak 7 kali berturut-turut.'
+                                    : 'To enable Developer Options on your Android device: Open Android Settings ➔ About Phone ➔ Tap "Build Number" 7 times continuously.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

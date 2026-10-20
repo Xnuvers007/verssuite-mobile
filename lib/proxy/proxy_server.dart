@@ -213,37 +213,37 @@ class ProxyServer {
       final upstream = await Socket.connect(host, port,
           timeout: Duration(seconds: config.connectionTimeout));
 
-      clientRequest.response.statusCode = 200;
-      clientRequest.response.reasonPhrase = 'Connection Established';
-      clientRequest.response.headers.contentLength = -1;
-      await clientRequest.response.detachSocket().then((clientSocket) {
-        upstream.listen(
-          clientSocket.add,
-          onDone: () => clientSocket.close(),
-          onError: (_) => clientSocket.close(),
-        );
-        clientSocket.listen(
-          upstream.add,
-          onDone: () => upstream.close(),
-          onError: (_) => upstream.close(),
-        );
-      });
+      final clientSocket = await clientRequest.response.detachSocket();
+      clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+      await clientSocket.flush();
+
+      upstream.listen(
+        clientSocket.add,
+        onDone: () => clientSocket.close(),
+        onError: (_) => clientSocket.close(),
+      );
+      clientSocket.listen(
+        upstream.add,
+        onDone: () => upstream.close(),
+        onError: (_) => upstream.close(),
+      );
     } catch (e) {
-      clientRequest.response.statusCode = 502;
-      clientRequest.response.write('Tunnel error: $e');
-      await clientRequest.response.close();
+      try {
+        clientRequest.response.statusCode = 502;
+        clientRequest.response.write('Tunnel error: $e');
+        await clientRequest.response.close();
+      } catch (_) {}
     }
   }
 
   /// MITM tunnel: TLS intercept, read requests, forward, capture.
   Future<void> _tunnelMitm(
       HttpRequest clientRequest, String host, int port) async {
+    Socket? clientSocket;
     try {
-      // Send 200 to tell client tunnel is established
-      clientRequest.response.statusCode = 200;
-      clientRequest.response.reasonPhrase = 'Connection Established';
-      clientRequest.response.headers.contentLength = -1;
-      final clientSocket = await clientRequest.response.detachSocket();
+      clientSocket = await clientRequest.response.detachSocket();
+      clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+      await clientSocket.flush();
 
       // Create TLS server context with our leaf cert
       final serverContext = ca!.createContextForHost(host);
@@ -259,6 +259,9 @@ class ProxyServer {
       await _handleMitmConnection(secureClient, host, port);
     } catch (e) {
       print('[ProxyServer] MITM error for $host: $e');
+      try {
+        clientSocket?.close();
+      } catch (_) {}
     }
   }
 

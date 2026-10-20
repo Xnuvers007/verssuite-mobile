@@ -375,8 +375,8 @@ class _WifiSetupTab extends StatelessWidget {
           stepNumber: '4',
           title: isIndonesian ? 'Masukkan Host & Port' : 'Enter Proxy Host & Port',
           desc: isIndonesian
-              ? '• Nama Host Proksi: $proxyHost\n• Port Proksi: ${config.port}\n• Bypass proxy: biarkan kosong atau localhost.'
-              : '• Proxy hostname: $proxyHost\n• Proxy port: ${config.port}\n• Bypass proxy: leave blank or localhost.',
+              ? '• Nama Host Proksi: 127.0.0.1 (atau IP Wi-Fi HP ini, misal 192.168.18.4)\n• Port Proksi: ${config.port}\n• PENTING: JANGAN gunakan kata "localhost" karena Android mem-bypass localhost secara internal!\n• URL tidak digunakan / Bypass proxy: Biarkan KOSONG.'
+              : '• Proxy Hostname: 127.0.0.1 (or this device Wi-Fi IP, e.g. 192.168.18.4)\n• Proxy Port: ${config.port}\n• IMPORTANT: DO NOT enter "localhost" as Android bypasses it internally!\n• Bypass proxy: Leave BLANK.',
         ),
         _StepItem(
           stepNumber: '5',

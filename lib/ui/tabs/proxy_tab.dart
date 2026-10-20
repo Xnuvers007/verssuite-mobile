@@ -253,6 +253,9 @@ class _ConfigInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isIndonesian = l.locale.languageCode == 'id';
+    final displayHost = config.bindAddress == '0.0.0.0' ? '127.0.0.1' : config.bindAddress;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -267,9 +270,29 @@ class _ConfigInfoCard extends StatelessWidget {
                   l.tr('proxy_config_title'),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TutorialPage(initialTab: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.menu_book_rounded, size: 14, color: Color(0xFF00D4AA)),
+                  label: Text(
+                    isIndonesian ? 'Panduan Setup' : 'Setup Guide',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF00D4AA)),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               l.tr('wifi_proxy_hint'),
               style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.6)),
@@ -278,14 +301,21 @@ class _ConfigInfoCard extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 Clipboard.setData(ClipboardData(
-                  text: '${config.bindAddress == '0.0.0.0' ? 'localhost' : config.bindAddress}:${config.port}',
+                  text: '$displayHost:${config.port}',
                 ));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.tr('copied'))),
+                  SnackBar(
+                    content: Text(
+                      isIndonesian
+                          ? 'Parameter proxy disalin: $displayHost:${config.port}'
+                          : 'Proxy copied: $displayHost:${config.port}',
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -293,19 +323,77 @@ class _ConfigInfoCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Text(
-                      '${config.bindAddress}:${config.port}',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6C63FF),
-                      ),
+                    const Icon(Icons.wifi, size: 18, color: Color(0xFF6C63FF)),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$displayHost : ${config.port}',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF6C63FF),
+                          ),
+                        ),
+                        Text(
+                          'Host: $displayHost | Port: ${config.port}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(),
-                    Icon(Icons.copy, size: 16, color: Colors.white.withValues(alpha: 0.4)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.copy, size: 14, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text(
+                            l.tr('copy'),
+                            style: const TextStyle(fontSize: 11, color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFAA33).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFFAA33).withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFFFFAA33)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isIndonesian
+                          ? 'Tips: Pada Nama Host ketik "127.0.0.1" atau IP HP Anda (misal 192.168.18.4). JANGAN ketik "localhost" karena Android mem-bypass localhost secara otomatis.'
+                          : 'Tip: For Hostname enter "127.0.0.1" or your phone IP (e.g. 192.168.18.4). DO NOT type "localhost" as Android automatically bypasses it.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

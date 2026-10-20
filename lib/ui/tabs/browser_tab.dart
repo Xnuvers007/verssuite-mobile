@@ -39,7 +39,7 @@ class BrowserTabState extends State<BrowserTab> {
   @override
   void initState() {
     super.initState();
-    _urlController.text = 'https://github.com/Xnuvers007/verssuite-mobile';
+    _urlController.text = 'https://www.google.com';
 
     final appState = context.read<AppState>();
     final config = appState.config;
@@ -239,7 +239,7 @@ class BrowserTabState extends State<BrowserTab> {
                 Expanded(
                   child: Text(
                     isProxyRunning
-                        ? '${l.tr('proxy_active_intercepting')} · :${appState.config.port}'
+                        ? '${l.tr('proxy_active_intercepting')} · 127.0.0.1:${appState.config.port}'
                         : l.tr('proxy_inactive'),
                     style: TextStyle(
                       fontSize: 11,
@@ -336,7 +336,7 @@ class BrowserTabState extends State<BrowserTab> {
                   visualDensity: VisualDensity.compact,
                   tooltip: l.tr('nav_home'),
                   color: Colors.white70,
-                  onPressed: () => _loadUrl('https://github.com/Xnuvers007/verssuite-mobile'),
+                  onPressed: () => _loadUrl('https://www.google.com'),
                 ),
 
                 // 5. Address Bar with Lock Icon (Inputan URL kayak di gambar)
@@ -444,9 +444,9 @@ class BrowserTabState extends State<BrowserTab> {
               scrollDirection: Axis.horizontal,
               children: [
                 _QuickChip(
-                  label: 'GitHub Repo',
-                  icon: Icons.code,
-                  onTap: () => _loadUrl('https://github.com/Xnuvers007/verssuite-mobile'),
+                  label: 'Google',
+                  icon: Icons.search,
+                  onTap: () => _loadUrl('https://www.google.com'),
                 ),
                 _QuickChip(
                   label: 'HttpBin',
