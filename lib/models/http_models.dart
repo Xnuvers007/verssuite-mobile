@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 /// Ordered, duplicate-preserving HTTP header collection.
@@ -223,17 +225,34 @@ class ProxyResponse {
         ct.contains('css');
   }
 
+  /// Returns the body bytes, decompressed if Content-Encoding is gzip or deflate.
+  Uint8List? get decompressedBody {
+    if (body == null || body!.isEmpty) return body;
+    final ce = headers.get('content-encoding')?.toLowerCase().trim();
+    if (ce == 'gzip') {
+      try {
+        return Uint8List.fromList(gzip.decode(body!));
+      } catch (_) {}
+    } else if (ce == 'deflate') {
+      try {
+        return Uint8List.fromList(zlib.decode(body!));
+      } catch (_) {}
+    }
+    return body;
+  }
+
   /// Serialize to raw HTTP response text.
   String toRaw() {
     final buf = StringBuffer();
     buf.write('$httpVersion $statusCode $statusText\r\n');
     buf.write('${headers.toWireFormat()}\r\n');
     buf.write('\r\n');
-    if (body != null && body!.isNotEmpty) {
+    final effective = decompressedBody;
+    if (effective != null && effective.isNotEmpty) {
       if (isText) {
-        buf.write(String.fromCharCodes(body!));
+        buf.write(utf8.decode(effective, allowMalformed: true));
       } else {
-        buf.write('[Binary data: ${body!.length} bytes]');
+        buf.write('[Binary data: ${effective.length} bytes]');
       }
     }
     return buf.toString();

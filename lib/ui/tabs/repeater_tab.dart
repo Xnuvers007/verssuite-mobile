@@ -52,6 +52,8 @@ class _RepeaterTabState extends State<RepeaterTab> {
       }
 
       final client = HttpClient();
+      client.findProxy = (uri) => 'DIRECT';
+      client.autoUncompress = false;
       client.badCertificateCallback = (cert, host, port) => true;
       client.connectionTimeout = const Duration(seconds: 15);
 

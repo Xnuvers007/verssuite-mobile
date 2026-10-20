@@ -52,6 +52,8 @@ class ProxyConfig {
         '*.googleusercontent.com',
         '*.gvt1.com',
         '*.gvt2.com',
+        '*.transsion-os.com',
+        '*.aibotplatform.com',
       ];
 
   static const String uaDesktopWindows =
@@ -128,7 +130,9 @@ class ProxyConfig {
         lowerHost.endsWith('.google.co.id') ||
         lowerHost.endsWith('.gstatic.com') ||
         lowerHost.endsWith('.googleapis.com') ||
-        lowerHost.endsWith('.googleusercontent.com')) {
+        lowerHost.endsWith('.googleusercontent.com') ||
+        lowerHost.endsWith('.transsion-os.com') ||
+        lowerHost.endsWith('.aibotplatform.com')) {
       return true;
     }
     for (final pattern in excludeHosts) {

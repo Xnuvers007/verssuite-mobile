@@ -195,6 +195,7 @@ class UpdateService {
   /// Check GitHub Releases API for the latest version.
   static Future<AppUpdateInfo?> checkForUpdate({bool checkDismissed = false}) async {
     final client = HttpClient();
+    client.findProxy = (uri) => 'DIRECT';
     client.connectionTimeout = const Duration(seconds: 10);
 
     try {
@@ -251,6 +252,7 @@ class UpdateService {
   /// Fetch the latest release info regardless of whether it's newer (useful for manual check).
   static Future<AppUpdateInfo?> getLatestReleaseInfo() async {
     final client = HttpClient();
+    client.findProxy = (uri) => 'DIRECT';
     client.connectionTimeout = const Duration(seconds: 10);
 
     try {

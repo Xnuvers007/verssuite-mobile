@@ -375,7 +375,8 @@ class _BodyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (response.body == null || response.body!.isEmpty) {
+    final effectiveBytes = response.decompressedBody;
+    if (effectiveBytes == null || effectiveBytes.isEmpty) {
       return Text(
         'Empty body',
         style: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
@@ -387,7 +388,7 @@ class _BodyView extends StatelessWidget {
     // Try to pretty-print JSON
     if (ct.contains('json')) {
       try {
-        final decoded = json.decode(utf8.decode(response.body!));
+        final decoded = json.decode(utf8.decode(effectiveBytes));
         final pretty = const JsonEncoder.withIndent('  ').convert(decoded);
         return SelectableText(
           pretty,
@@ -398,7 +399,7 @@ class _BodyView extends StatelessWidget {
 
     if (response.isText) {
       return SelectableText(
-        utf8.decode(response.body!, allowMalformed: true),
+        utf8.decode(effectiveBytes, allowMalformed: true),
         style: const TextStyle(fontFamily: 'monospace', fontSize: 11, height: 1.5),
       );
     }

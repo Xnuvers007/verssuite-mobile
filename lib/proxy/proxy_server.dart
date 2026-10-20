@@ -68,10 +68,6 @@ class ProxyServer {
   /// Handle regular HTTP requests (non-CONNECT).
   Future<void> _handleHttp(HttpRequest clientRequest) async {
     final uri = clientRequest.uri;
-    final host = uri.host.isNotEmpty
-        ? uri.host
-        : clientRequest.headers.host ?? 'localhost';
-    final port = uri.port != 0 ? uri.port : 80;
 
     // Build ProxyRequest
     final headers = HttpHeaders();
@@ -122,17 +118,35 @@ class ProxyServer {
     // Forward request upstream
     try {
       final stopwatch = Stopwatch()..start();
-      final upstream = await HttpClient().openUrl(
+      final httpClient = HttpClient();
+      httpClient.badCertificateCallback = (cert, host, port) => true;
+      httpClient.findProxy = (uri) => 'DIRECT'; // NEVER loop back to local proxy!
+      httpClient.autoUncompress = false;
+
+      final upstream = await httpClient.openUrl(
         requestToSend.method,
         Uri.parse(requestToSend.url),
       );
 
       // Copy headers to upstream request
       requestToSend.headers.entries.forEach((e) {
-        if (e.key != 'host') {
+        final key = e.key.toLowerCase();
+        if (key != 'host' && key != 'content-length') {
+          if (key == 'accept-encoding') {
+            if (config.stripAcceptEncoding) {
+              return;
+            } else {
+              upstream.headers.set('accept-encoding', 'gzip, deflate');
+              return;
+            }
+          }
           upstream.headers.add(e.key, e.value);
         }
       });
+
+      if (config.customForwardedIp.trim().isNotEmpty) {
+        upstream.headers.set('x-forwarded-for', config.customForwardedIp.trim());
+      }
 
       if (requestToSend.body != null) {
         upstream.add(requestToSend.body!);
@@ -152,6 +166,9 @@ class ProxyServer {
       respHeaders.stripHopByHop();
 
       final respBody = await _readStream(upstreamResponse);
+      respHeaders.remove('transfer-encoding');
+      respHeaders.set('content-length', respBody.length.toString());
+      respHeaders.set('connection', 'close');
 
       flow.response = ProxyResponse(
         statusCode: upstreamResponse.statusCode,
@@ -165,20 +182,19 @@ class ProxyServer {
 
       // Send response to client
       clientRequest.response.statusCode = upstreamResponse.statusCode;
-      upstreamResponse.headers.forEach((name, values) {
-        for (final v in values) {
-          if (name.toLowerCase() != 'transfer-encoding') {
-            clientRequest.response.headers.add(name, v);
-          }
-        }
+      respHeaders.entries.forEach((e) {
+        clientRequest.response.headers.add(e.key, e.value);
       });
       clientRequest.response.add(Uint8List.fromList(respBody));
       await clientRequest.response.close();
+      httpClient.close(force: true);
     } catch (e) {
       flow.state = FlowState.error;
       flow.response = ProxyResponse(
         statusCode: 502,
         statusText: 'Bad Gateway',
+        headers: HttpHeaders(),
+        body: Uint8List.fromList(utf8.encode('Upstream error: $e')),
       );
       onFlow(flow);
       clientRequest.response.statusCode = 502;
@@ -322,10 +338,14 @@ class ProxyServer {
 
   Future<void> _handleMitmConnection(
       SecureSocket secureClient, String host, int port) async {
+    final reader = _BufferedSocketReader(secureClient);
     try {
       // Read the raw request from the client
-      final requestData = await _readUntilHeaderEnd(secureClient);
-      if (requestData.isEmpty) {
+      final requestData = await reader.readUntilHeaderEnd(
+        timeout: Duration(seconds: config.connectionTimeout),
+      );
+      if (requestData == null || requestData.isEmpty) {
+        reader.cancel();
         secureClient.close();
         return;
       }
@@ -333,6 +353,7 @@ class ProxyServer {
       final requestText = utf8.decode(requestData, allowMalformed: true);
       final lines = requestText.split('\r\n');
       if (lines.isEmpty) {
+        reader.cancel();
         secureClient.close();
         return;
       }
@@ -360,9 +381,13 @@ class ProxyServer {
       if (clStr != null) {
         final cl = int.tryParse(clStr) ?? 0;
         if (cl > 0) {
-          body = await _readBytes(secureClient, cl);
+          body = await reader.readBytes(
+            cl,
+            timeout: Duration(seconds: config.connectionTimeout),
+          );
         }
       }
+      reader.cancel();
 
       final url = 'https://$host${port != 443 ? ':$port' : ''}$path';
       final flowId = 'flow_${_flowCounter++}';
@@ -388,8 +413,10 @@ class ProxyServer {
         if (modified == null) {
           flow.state = FlowState.dropped;
           onFlow(flow);
-          final resp = 'HTTP/1.1 403 Forbidden\r\nContent-Length: 7\r\n\r\nDropped';
+          final resp =
+              'HTTP/1.1 403 Forbidden\r\nContent-Length: 7\r\nConnection: close\r\n\r\nDropped';
           secureClient.add(utf8.encode(resp));
+          await secureClient.flush();
           await secureClient.close();
           return;
         }
@@ -402,8 +429,10 @@ class ProxyServer {
       // Forward upstream over TLS
       try {
         final stopwatch = Stopwatch()..start();
-        final httpClient = HttpClient()
-          ..badCertificateCallback = (cert, host, port) => true;
+        final httpClient = HttpClient();
+        httpClient.badCertificateCallback = (cert, host, port) => true;
+        httpClient.findProxy = (uri) => 'DIRECT'; // NEVER loop back to local proxy!
+        httpClient.autoUncompress = false; // Preserve upstream raw encoding!
 
         final upstream = await httpClient.openUrl(
           requestToSend.method,
@@ -411,10 +440,23 @@ class ProxyServer {
         );
 
         requestToSend.headers.entries.forEach((e) {
-          if (e.key != 'host') {
+          final key = e.key.toLowerCase();
+          if (key != 'host' && key != 'content-length') {
+            if (key == 'accept-encoding') {
+              if (config.stripAcceptEncoding) {
+                return;
+              } else {
+                upstream.headers.set('accept-encoding', 'gzip, deflate');
+                return;
+              }
+            }
             upstream.headers.add(e.key, e.value);
           }
         });
+
+        if (config.customForwardedIp.trim().isNotEmpty) {
+          upstream.headers.set('x-forwarded-for', config.customForwardedIp.trim());
+        }
 
         if (requestToSend.body != null) {
           upstream.add(requestToSend.body!);
@@ -437,6 +479,7 @@ class ProxyServer {
         respHeaders.stripHopByHop();
         respHeaders.remove('transfer-encoding');
         respHeaders.set('content-length', respBody.length.toString());
+        respHeaders.set('connection', 'close'); // Explicitly close HTTP/1.1 connection
 
         flow.response = ProxyResponse(
           statusCode: upstreamResponse.statusCode,
@@ -464,16 +507,26 @@ class ProxyServer {
         httpClient.close(force: true);
       } catch (e) {
         flow.state = FlowState.error;
+        flow.response = ProxyResponse(
+          statusCode: 502,
+          statusText: 'Bad Gateway',
+          headers: HttpHeaders(),
+          body: Uint8List.fromList(utf8.encode('Upstream error: $e')),
+        );
         onFlow(flow);
         try {
           secureClient.add(utf8.encode(
-              'HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n'));
+              'HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'));
+          await secureClient.flush();
           await secureClient.close();
         } catch (_) {}
       }
     } catch (e) {
-      print('[ProxyServer] MITM connection error: $e');
-      try { secureClient.close(); } catch (_) {}
+      reader.cancel();
+      print('[ProxyServer] MITM connection error for $host: $e');
+      try {
+        secureClient.close();
+      } catch (_) {}
     }
   }
 
@@ -494,75 +547,112 @@ class ProxyServer {
     }
     return bytes;
   }
+}
 
-  Future<Uint8List> _readUntilHeaderEnd(Socket socket) async {
-    final buffer = <int>[];
-    final completer = Completer<Uint8List>();
-    Timer? timeoutTimer;
-    StreamSubscription? sub;
+/// Helper class to buffer bytes from a single-subscription Socket stream
+/// and parse HTTP headers and bodies without stream errors or data loss.
+class _BufferedSocketReader {
+  final StreamSubscription<Uint8List> _subscription;
+  final BytesBuilder _buffer = BytesBuilder(copy: false);
+  Completer<void>? _dataCompleter;
+  bool _isDone = false;
 
-    void finish(Uint8List res) {
-      timeoutTimer?.cancel();
-      sub?.cancel();
-      if (!completer.isCompleted) completer.complete(res);
-    }
-
-    sub = socket.listen(
-      (data) {
-        buffer.addAll(data);
-        for (var i = 3; i < buffer.length; i++) {
-          if (buffer[i - 3] == 13 &&
-              buffer[i - 2] == 10 &&
-              buffer[i - 1] == 13 &&
-              buffer[i] == 10) {
-            finish(Uint8List.fromList(buffer.sublist(0, i + 1)));
-            return;
-          }
-        }
-        if (buffer.length > config.maxBodySize) {
-          finish(Uint8List.fromList(buffer));
-        }
-      },
-      onError: (_) => finish(Uint8List(0)),
-      onDone: () => finish(Uint8List.fromList(buffer)),
-      cancelOnError: true,
-    );
-
-    timeoutTimer = Timer(Duration(seconds: config.connectionTimeout), () {
-      finish(Uint8List.fromList(buffer));
+  _BufferedSocketReader(Stream<Uint8List> stream)
+      : _subscription = stream.listen(null) {
+    _subscription.onData((data) {
+      _buffer.add(data);
+      if (_dataCompleter != null && !_dataCompleter!.isCompleted) {
+        _dataCompleter!.complete();
+      }
     });
-
-    return completer.future;
+    _subscription.onDone(() {
+      _isDone = true;
+      if (_dataCompleter != null && !_dataCompleter!.isCompleted) {
+        _dataCompleter!.complete();
+      }
+    });
+    _subscription.onError((_) {
+      _isDone = true;
+      if (_dataCompleter != null && !_dataCompleter!.isCompleted) {
+        _dataCompleter!.complete();
+      }
+    });
   }
 
-  Future<Uint8List> _readBytes(Socket socket, int count) async {
-    final buffer = <int>[];
-    final completer = Completer<Uint8List>();
-    Timer? timeoutTimer;
-    StreamSubscription? sub;
+  Future<Uint8List?> readUntilHeaderEnd(
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    final stopwatch = Stopwatch()..start();
+    while (true) {
+      final bytes = _buffer.toBytes();
+      for (var i = 3; i < bytes.length; i++) {
+        if (bytes[i - 3] == 13 &&
+            bytes[i - 2] == 10 &&
+            bytes[i - 1] == 13 &&
+            bytes[i] == 10) {
+          final headerBytes = bytes.sublist(0, i + 1);
+          final remaining = bytes.sublist(i + 1);
+          _buffer.clear();
+          if (remaining.isNotEmpty) {
+            _buffer.add(remaining);
+          }
+          return headerBytes;
+        }
+      }
+      if (_isDone) {
+        if (_buffer.isNotEmpty) {
+          final b = _buffer.takeBytes();
+          return b;
+        }
+        return null;
+      }
+      if (stopwatch.elapsed >= timeout) return null;
 
-    void finish(Uint8List res) {
-      timeoutTimer?.cancel();
-      sub?.cancel();
-      if (!completer.isCompleted) completer.complete(res);
+      _dataCompleter = Completer<void>();
+      final remainingTimeout = timeout - stopwatch.elapsed;
+      if (remainingTimeout <= Duration.zero) return null;
+      try {
+        await _dataCompleter!.future.timeout(remainingTimeout);
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  Future<Uint8List> readBytes(int count,
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    final stopwatch = Stopwatch()..start();
+    while (_buffer.length < count) {
+      if (_isDone) break;
+      if (stopwatch.elapsed >= timeout) break;
+
+      _dataCompleter = Completer<void>();
+      final remainingTimeout = timeout - stopwatch.elapsed;
+      if (remainingTimeout <= Duration.zero) break;
+      try {
+        await _dataCompleter!.future.timeout(remainingTimeout);
+      } catch (_) {
+        break;
+      }
     }
 
-    sub = socket.listen(
-      (data) {
-        buffer.addAll(data);
-        if (buffer.length >= count) {
-          finish(Uint8List.fromList(buffer.sublist(0, count)));
-        }
-      },
-      onError: (_) => finish(Uint8List.fromList(buffer)),
-      onDone: () => finish(Uint8List.fromList(buffer)),
-      cancelOnError: true,
-    );
+    final bytes = _buffer.toBytes();
+    if (bytes.length <= count) {
+      _buffer.clear();
+      return bytes;
+    } else {
+      final result = bytes.sublist(0, count);
+      final remaining = bytes.sublist(count);
+      _buffer.clear();
+      if (remaining.isNotEmpty) {
+        _buffer.add(remaining);
+      }
+      return result;
+    }
+  }
 
-    timeoutTimer = Timer(Duration(seconds: config.connectionTimeout), () {
-      finish(Uint8List.fromList(buffer));
-    });
-
-    return completer.future;
+  void cancel() {
+    try {
+      _subscription.cancel();
+    } catch (_) {}
   }
 }
