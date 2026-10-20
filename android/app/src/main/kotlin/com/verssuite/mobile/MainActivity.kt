@@ -11,6 +11,9 @@ import android.os.Environment
 import android.os.PowerManager
 import android.provider.MediaStore
 import androidx.core.app.NotificationCompat
+import androidx.webkit.ProxyConfig
+import androidx.webkit.ProxyController
+import androidx.webkit.WebViewFeature
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -65,8 +68,33 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARG", "url is null", null)
                     }
                 }
+                "setWebViewProxy" -> {
+                    val host = call.argument<String>("host") ?: "127.0.0.1"
+                    val port = call.argument<Int>("port") ?: 8080
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    setWebViewProxy(host, port, enabled)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun setWebViewProxy(host: String, port: Int, enabled: Boolean) {
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
+                val controller = ProxyController.getInstance()
+                if (enabled) {
+                    val proxyConfig = ProxyConfig.Builder()
+                        .addProxyRule("$host:$port")
+                        .build()
+                    controller.setProxyOverride(proxyConfig, { }, { })
+                } else {
+                    controller.clearProxyOverride({ }, { })
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

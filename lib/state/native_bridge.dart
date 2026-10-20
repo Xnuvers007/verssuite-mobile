@@ -71,4 +71,22 @@ class NativeBridge {
       return false;
     }
   }
+
+  static Future<bool> setWebViewProxy({
+    String host = '127.0.0.1',
+    int port = 8080,
+    bool enabled = true,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('setWebViewProxy', {
+        'host': host,
+        'port': port,
+        'enabled': enabled,
+      });
+      return res ?? true;
+    } catch (e) {
+      print('[NativeBridge] setWebViewProxy error: $e');
+      return false;
+    }
+  }
 }

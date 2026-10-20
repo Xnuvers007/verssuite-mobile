@@ -208,6 +208,108 @@ class SettingsTab extends StatelessWidget {
               ),
             ),
           ),
+          // ─── Developer Options ─────────────────────────────
+          _SectionHeader(title: l.tr('developer_options')),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _SettingRow(
+                    icon: Icons.travel_explore,
+                    label: l.tr('dev_auto_proxy_title'),
+                    subtitle: l.tr('dev_auto_proxy_desc'),
+                    trailing: Switch(
+                      value: config.inAppBrowserAutoProxy,
+                      activeColor: const Color(0xFF00D4AA),
+                      onChanged: (val) {
+                        config.inAppBrowserAutoProxy = val;
+                        appState.saveConfig();
+                        if (appState.proxyRunning) {
+                          NativeBridge.setWebViewProxy(
+                            port: config.port,
+                            enabled: val,
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _SettingRow(
+                    icon: Icons.gpp_maybe_outlined,
+                    label: l.tr('dev_bypass_ssl_title'),
+                    subtitle: l.tr('dev_bypass_ssl_desc'),
+                    trailing: Switch(
+                      value: config.bypassSslWarnings,
+                      activeColor: const Color(0xFF00D4AA),
+                      onChanged: (val) {
+                        config.bypassSslWarnings = val;
+                        appState.saveConfig();
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _SettingRow(
+                    icon: Icons.compress,
+                    label: l.tr('dev_strip_encoding_title'),
+                    subtitle: l.tr('dev_strip_encoding_desc'),
+                    trailing: Switch(
+                      value: config.stripAcceptEncoding,
+                      activeColor: const Color(0xFF00D4AA),
+                      onChanged: (val) {
+                        config.stripAcceptEncoding = val;
+                        appState.saveConfig();
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _SettingRow(
+                    icon: Icons.storage,
+                    label: l.tr('dev_max_history_title'),
+                    trailing: DropdownButton<int>(
+                      value: config.maxFlowHistory,
+                      dropdownColor: const Color(0xFF1A1A2E),
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: 100, child: Text('100 flows')),
+                        DropdownMenuItem(value: 250, child: Text('250 flows')),
+                        DropdownMenuItem(value: 500, child: Text('500 flows')),
+                        DropdownMenuItem(value: 1000, child: Text('1000 flows')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          config.maxFlowHistory = val;
+                          appState.saveConfig();
+                        }
+                      },
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  _SettingRow(
+                    icon: Icons.timer_outlined,
+                    label: l.tr('dev_timeout_title'),
+                    trailing: DropdownButton<int>(
+                      value: config.connectionTimeout,
+                      dropdownColor: const Color(0xFF1A1A2E),
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: 10, child: Text('10s')),
+                        DropdownMenuItem(value: 30, child: Text('30s')),
+                        DropdownMenuItem(value: 60, child: Text('60s')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          config.connectionTimeout = val;
+                          appState.saveConfig();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
 
           // ─── About ────────────────────────────────────────

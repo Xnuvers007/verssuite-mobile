@@ -134,6 +134,9 @@ class AppState extends ChangeNotifier {
     await _server!.start();
     await NativeBridge.startForegroundService();
     await NativeBridge.acquireWakeLock();
+    if (_config.inAppBrowserAutoProxy) {
+      await NativeBridge.setWebViewProxy(port: _config.port, enabled: true);
+    }
     notifyListeners();
   }
 
@@ -142,10 +145,11 @@ class AppState extends ChangeNotifier {
     _server = null;
     await NativeBridge.stopForegroundService();
     await NativeBridge.releaseWakeLock();
+    if (_config.inAppBrowserAutoProxy) {
+      await NativeBridge.setWebViewProxy(enabled: false);
+    }
     notifyListeners();
   }
-
-  static const int maxFlows = 500;
 
   void _onFlowUpdate(HttpFlow flow) {
     final idx = _flows.indexWhere((f) => f.id == flow.id);
@@ -153,8 +157,8 @@ class AppState extends ChangeNotifier {
       _flows[idx] = flow;
     } else {
       _flows.insert(0, flow);
-      if (_flows.length > maxFlows) {
-        _flows.removeRange(maxFlows, _flows.length);
+      if (_flows.length > _config.maxFlowHistory) {
+        _flows.removeRange(_config.maxFlowHistory, _flows.length);
       }
     }
     // Throttle notifications

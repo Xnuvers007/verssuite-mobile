@@ -1,4 +1,4 @@
-/// Proxy server configuration.
+/// Proxy server & developer configuration.
 class ProxyConfig {
   int port;
   String bindAddress;
@@ -7,6 +7,14 @@ class ProxyConfig {
   int maxBodySize; // bytes
   List<String> excludeHosts;
 
+  // Developer Settings
+  bool inAppBrowserAutoProxy;
+  bool bypassSslWarnings;
+  bool stripAcceptEncoding;
+  bool debugLogging;
+  int maxFlowHistory;
+  String customUserAgent;
+
   ProxyConfig({
     this.port = 8080,
     this.bindAddress = '0.0.0.0',
@@ -14,6 +22,12 @@ class ProxyConfig {
     this.connectionTimeout = 30,
     this.maxBodySize = 10 * 1024 * 1024, // 10MB
     List<String>? excludeHosts,
+    this.inAppBrowserAutoProxy = true,
+    this.bypassSslWarnings = true,
+    this.stripAcceptEncoding = false,
+    this.debugLogging = false,
+    this.maxFlowHistory = 500,
+    this.customUserAgent = '',
   }) : excludeHosts = excludeHosts ?? [];
 
   bool shouldExclude(String host) {
@@ -34,6 +48,12 @@ class ProxyConfig {
         'connectionTimeout': connectionTimeout,
         'maxBodySize': maxBodySize,
         'excludeHosts': excludeHosts,
+        'inAppBrowserAutoProxy': inAppBrowserAutoProxy,
+        'bypassSslWarnings': bypassSslWarnings,
+        'stripAcceptEncoding': stripAcceptEncoding,
+        'debugLogging': debugLogging,
+        'maxFlowHistory': maxFlowHistory,
+        'customUserAgent': customUserAgent,
       };
 
   factory ProxyConfig.fromJson(Map<String, dynamic> json) => ProxyConfig(
@@ -46,5 +66,11 @@ class ProxyConfig {
                 ?.map((e) => e.toString())
                 .toList() ??
             [],
+        inAppBrowserAutoProxy: json['inAppBrowserAutoProxy'] ?? true,
+        bypassSslWarnings: json['bypassSslWarnings'] ?? true,
+        stripAcceptEncoding: json['stripAcceptEncoding'] ?? false,
+        debugLogging: json['debugLogging'] ?? false,
+        maxFlowHistory: json['maxFlowHistory'] ?? 500,
+        customUserAgent: json['customUserAgent'] ?? '',
       );
 }

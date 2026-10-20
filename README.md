@@ -53,6 +53,8 @@ Aplikasi ini dilengkapi antarmuka modern bertema dark cybernetic berbasis **Flut
 | **HTTPS MITM Interception** | Generator Root CA otomatis (10 tahun) dan pembuatan Leaf Certificate instan secara dinamis (*on-the-fly*) dengan ekstensi SAN (*Subject Alternative Name*). |
 | **Traffic History** | Riwayat seluruh pertukaran request/response secara real-time. Pencarian instan berdasarkan method, URL, status code, dan host. Detail flow mencakup Headers, Raw text, Hex dump, dan format JSON pretty-print otomatis. |
 | **Intercept Engine** | Kemampuan menahan (*pause*) request jaringan sebelum dikirim ke upstream. Pengguna dapat mengedit URL, header, payload mentah lalu memilih **Forward** atau **Drop**. |
+| **In-App Browser (Open Browser)** | Browser bawaan dengan address & search bar. Mengetik URL/pencarian langsung di dalam aplikasi; seluruh trafik otomatis diarahkan ke proxy VersSuite dan dapat di-intersep tanpa ubah settingan Wi-Fi! |
+| **Developer Options** | Pengaturan lanjutan: otomatisasi proxy browser bawaan, bypass peringatan SSL self-signed, kompresi strip-encoding (gzip/br), konfigurasi ukuran memori riwayat (100–1000 flows), dan timeout. |
 | **HTTP Repeater** | Modul replay untuk merancang custom HTTP request, mengubah payload secara manual, dan mengevaluasi status code, ukuran data, dan durasi latensi (ms). |
 | **cURL Exporter** | Salin paket request apapun menjadi perintah cURL terminal siap pakai hanya dengan satu klik. |
 | **Bilingual Mode (EN & ID)** | Mendukung penuh 2 bahasa: **Bahasa Indonesia** dan **English**, dapat diganti kapan saja secara instan melalui menu Pengaturan tanpa me-restart aplikasi. |

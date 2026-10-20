@@ -17,4 +17,5 @@
 
 # AndroidX & Notifications
 -keep class androidx.core.app.NotificationCompat** { *; }
+-keep class androidx.webkit.** { *; }
 -dontwarn androidx.**

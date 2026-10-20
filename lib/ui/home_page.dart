@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import 'tabs/proxy_tab.dart';
+import 'tabs/browser_tab.dart';
 import 'tabs/history_tab.dart';
 import 'tabs/intercept_tab.dart';
 import 'tabs/repeater_tab.dart';
@@ -16,28 +17,16 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
-  late final AnimationController _fabAnimController;
 
   @override
   void initState() {
     super.initState();
-    _fabAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
     // Init CA on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().initCA();
     });
-  }
-
-  @override
-  void dispose() {
-    _fabAnimController.dispose();
-    super.dispose();
   }
 
   @override
@@ -47,6 +36,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     final tabs = [
       const ProxyTab(),
+      const BrowserTab(),
       const HistoryTab(),
       const InterceptTab(),
       const RepeaterTab(),
@@ -55,44 +45,50 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     final destinations = [
       NavigationDestination(
-        icon: const Icon(Icons.wifi_tethering_outlined),
-        selectedIcon: const Icon(Icons.wifi_tethering),
+        icon: const Icon(Icons.wifi_tethering_outlined, size: 20),
+        selectedIcon: const Icon(Icons.wifi_tethering, size: 20),
         label: l.tr('proxy'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.history_outlined),
-        selectedIcon: const Icon(Icons.history),
+        icon: const Icon(Icons.travel_explore_outlined, size: 20),
+        selectedIcon: const Icon(Icons.travel_explore, size: 20),
+        label: l.tr('browser'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.history_outlined, size: 20),
+        selectedIcon: const Icon(Icons.history, size: 20),
         label: l.tr('history'),
       ),
       NavigationDestination(
         icon: Badge(
           isLabelVisible: appState.interceptQueue.isNotEmpty,
           label: Text('${appState.interceptQueue.length}'),
-          child: const Icon(Icons.pause_circle_outline),
+          child: const Icon(Icons.pause_circle_outline, size: 20),
         ),
         selectedIcon: Badge(
           isLabelVisible: appState.interceptQueue.isNotEmpty,
           label: Text('${appState.interceptQueue.length}'),
-          child: const Icon(Icons.pause_circle_filled),
+          child: const Icon(Icons.pause_circle_filled, size: 20),
         ),
         label: l.tr('intercept'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.replay_outlined),
-        selectedIcon: const Icon(Icons.replay),
+        icon: const Icon(Icons.replay_outlined, size: 20),
+        selectedIcon: const Icon(Icons.replay, size: 20),
         label: l.tr('repeater'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.settings_outlined),
-        selectedIcon: const Icon(Icons.settings),
+        icon: const Icon(Icons.settings_outlined, size: 20),
+        selectedIcon: const Icon(Icons.settings, size: 20),
         label: l.tr('settings'),
       ),
     ];
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: tabs[_currentIndex],
+      // Use IndexedStack to preserve Browser & Flow states across tab switches
+      body: IndexedStack(
+        index: _currentIndex,
+        children: tabs,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -107,7 +103,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           selectedIndex: _currentIndex,
           onDestinationSelected: (i) => setState(() => _currentIndex = i),
           destinations: destinations,
-          height: 65,
+          height: 64,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         ),
       ),
