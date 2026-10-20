@@ -192,11 +192,23 @@ Anda **tidak perlu menginstal Flutter SDK, Android Studio, atau Java di komputer
    - Workflow **"Build VersSuite Mobile APK"** akan berjalan secara otomatis.
    - Anda juga dapat memicunya kapan saja melalui tombol **"Run workflow"**.
 
-3. **Unduh File APK**:
+3. **Unduh File APK Ramping (Optimized & Split-per-ABI)**:
    - Setelah proses selesai (status centang hijau ✅), klik pada run tersebut.
    - Di bagian **Artifacts** (di bagian bawah halaman), unduh file:
-     👉 **`verssuite-mobile-release-apk`**
-   - Ekstrak file zip dan pasang `app-release.apk` langsung ke perangkat Android Anda.
+     👉 **`verssuite-mobile-release-apks`**
+   - Ekstrak file zip. Anda akan mendapatkan pilihan APK yang dioptimalkan:
+     - 🚀 **`app-arm64-v8a-release.apk`** *(Ukuran super ringan ~10–15 MB)*: **Sangat direkomendasikan** untuk 95%+ smartphone Android masa kini.
+     - 📱 **`app-armeabi-v7a-release.apk`** *(Ukuran ~9–13 MB)*: Untuk smartphone Android 32-bit lawas.
+     - 💻 **`app-x86_64-release.apk`** *(Ukuran ~14–18 MB)*: Untuk Android Emulator / PC / Chromebook.
+     - 📦 **`app-release.apk`** *(Universal)*: Menggabungkan seluruh arsitektur sekaligus dalam satu file.
+
+> [!TIP]
+> **Mengapa sizenya sangat kecil?**
+> Pipeline build VersSuite Mobile menggunakan:
+> 1. **ProGuard / R8 Shrinking**: Menghapus kelas dan resource Java/Android yang tidak digunakan.
+> 2. **Icon Tree-Shaking**: Memangkas glyph icon yang tidak terpakai dari font asset.
+> 3. **Split-per-ABI**: Memisahkan binary native C++/AOT untuk masing-masing arsitektur CPU, sehingga APK tidak membengkak karena library arsitektur lain.
+> 4. **AOT Bytecode Obfuscation**: Memisahkan tabel simbol debug dari binary `libapp.so`.
 
 > [!NOTE]
 > File APK Release sudah ditandatangani (*auto-signed*) menggunakan debug keystore bawaan Android Gradle, sehingga siap dipasang langsung tanpa memerlukan konfigurasi keystore rahasia tambahan.
