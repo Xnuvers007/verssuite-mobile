@@ -50,17 +50,24 @@ class _UpdateDialogState extends State<UpdateDialog> {
     final l = AppLocalizations.of(context);
     final targetAsset = widget.updateInfo.getOptimalAsset(widget.deviceAbi);
 
-    return Dialog(
-      backgroundColor: const Color(0xFF131525),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: const Color(0xFF6C63FF).withValues(alpha: 0.4), width: 1.5),
-      ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+    return PopScope(
+      canPop: !_isDownloading,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          UpdateService.markUpdateDismissed(widget.updateInfo.tagName);
+        }
+      },
+      child: Dialog(
+        backgroundColor: const Color(0xFF131525),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: const Color(0xFF6C63FF).withValues(alpha: 0.4), width: 1.5),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -288,7 +295,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _isDownloading ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isDownloading
+                        ? null
+                        : () async {
+                            await UpdateService.markUpdateDismissed(widget.updateInfo.tagName);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
                     child: Text(
                       l.tr('update_later'),
                       style: TextStyle(
@@ -303,6 +317,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -332,6 +347,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       if (!mounted) return;
 
       if (file != null && await file.exists()) {
+        await UpdateService.markUpdateInstalled(widget.updateInfo.cleanVersion);
         setState(() {
           _isDownloading = false;
           _downloadedFile = file;
@@ -356,6 +372,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
   }
 
   Future<void> _triggerInstall(String filePath) async {
+    await UpdateService.markUpdateInstalled(widget.updateInfo.cleanVersion);
     final success = await UpdateService.installApk(filePath);
     if (!success && mounted) {
       setState(() {

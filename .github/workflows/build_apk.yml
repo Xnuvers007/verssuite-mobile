@@ -28,14 +28,25 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME}"
+            CLEAN_VER="${VERSION#v}"
           else
             BASE_VER=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
             MAJOR_MINOR=$(echo "$BASE_VER" | cut -d'.' -f1,2)
-            VERSION="v${MAJOR_MINOR}.${{ github.run_number }}"
+            CLEAN_VER="${MAJOR_MINOR}.${{ github.run_number }}"
+            VERSION="v${CLEAN_VER}"
           fi
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "CLEAN_VER=${CLEAN_VER}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Determined Release Version: ${VERSION}"
+          echo "clean_version=${CLEAN_VER}" >> $GITHUB_OUTPUT
+          echo "Determined Release Version: ${VERSION} (clean: ${CLEAN_VER}, build: ${{ github.run_number }})"
+
+      - name: Update Version in pubspec.yaml
+        run: |
+          echo "Updating pubspec.yaml version to ${CLEAN_VER}+${BUILD_NUMBER}..."
+          sed -i "s/^version: .*/version: ${CLEAN_VER}+${BUILD_NUMBER}/" pubspec.yaml
+          cat pubspec.yaml | grep '^version: '
 
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -58,20 +69,14 @@ jobs:
 
       - name: Build Split-per-ABI APKs (Ultra-Small Size ~10-15MB)
         run: |
+          mkdir -p release-apks
           flutter build apk --release \
             --split-per-abi \
             --tree-shake-icons \
+            --build-name="${CLEAN_VER}" \
+            --build-number="${BUILD_NUMBER}" \
+            --dart-define="APP_VERSION=${CLEAN_VER}" \
             --android-skip-build-dependency-validation
-
-      - name: Build Universal Release APK (All ABIs)
-        run: |
-          flutter build apk --release \
-            --tree-shake-icons \
-            --android-skip-build-dependency-validation
-
-      - name: Organize & Package Release APKs with SHA-256 Checksums
-        run: |
-          mkdir -p release-apks
           for f in build/app/outputs/flutter-apk/*.apk; do
             [ -f "$f" ] || continue
             fname=$(basename "$f")
@@ -85,15 +90,28 @@ jobs:
               *x86_64*)
                 cp "$f" "release-apks/verssuite-mobile-${VERSION}-x86_64.apk"
                 ;;
-              *app-release.apk)
-                cp "$f" "release-apks/verssuite-mobile-${VERSION}-universal.apk"
-                ;;
-              *)
-                cp "$f" "release-apks/${fname}"
-                ;;
             esac
           done
 
+      - name: Build Universal Release APK (All ABIs)
+        run: |
+          mkdir -p release-apks
+          flutter build apk --release \
+            --tree-shake-icons \
+            --build-name="${CLEAN_VER}" \
+            --build-number="${BUILD_NUMBER}" \
+            --dart-define="APP_VERSION=${CLEAN_VER}" \
+            --android-skip-build-dependency-validation
+          for f in build/app/outputs/flutter-apk/*.apk; do
+            [ -f "$f" ] || continue
+            fname=$(basename "$f")
+            if [[ "$fname" == *app-release.apk ]]; then
+              cp "$f" "release-apks/verssuite-mobile-${VERSION}-universal.apk"
+            fi
+          done
+
+      - name: Generate SHA-256 Checksums
+        run: |
           cd release-apks
           sha256sum *.apk > SHA256SUMS.txt
           echo "=== SHA-256 Checksums ==="

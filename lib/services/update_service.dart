@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../state/native_bridge.dart';
 
 class UpdateAsset {
@@ -87,6 +88,82 @@ class UpdateService {
   static const String releasesApiUrl =
       'https://api.github.com/repos/$repoOwner/$repoName/releases/latest';
 
+  static const String _prefDismissedTag = 'dismissed_update_tag';
+  static const String _prefDismissedTime = 'dismissed_update_time';
+  static const String _prefInstalledVersion = 'installed_app_version';
+
+  /// Returns the current installed app version.
+  /// Priority:
+  /// 1. Compile-time constant from --dart-define=APP_VERSION=... (if not default '1.0.0')
+  /// 2. Android native PackageManager versionName (if not default '1.0.0')
+  /// 3. Locally saved version in SharedPreferences from in-app updates
+  /// 4. Fallback to native bridge or '1.0.0'
+  static Future<String> getCurrentVersion() async {
+    const envVer = String.fromEnvironment('APP_VERSION');
+    if (envVer.isNotEmpty && envVer != '1.0.0') {
+      return envVer;
+    }
+
+    try {
+      final nativeVer = await NativeBridge.getAppVersion();
+      if (nativeVer.isNotEmpty && nativeVer != '1.0.0') {
+        return nativeVer;
+      }
+    } catch (_) {}
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedVer = prefs.getString(_prefInstalledVersion);
+      if (savedVer != null && savedVer.isNotEmpty) {
+        return savedVer;
+      }
+    } catch (_) {}
+
+    try {
+      final nativeVer = await NativeBridge.getAppVersion();
+      if (nativeVer.isNotEmpty) return nativeVer;
+    } catch (_) {}
+
+    return envVer.isNotEmpty ? envVer : '1.0.0';
+  }
+
+  /// Check if the user already dismissed this update within the last 24 hours.
+  static Future<bool> isUpdateDismissed(String tagName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dismissedTag = prefs.getString(_prefDismissedTag);
+      final dismissedTime = prefs.getInt(_prefDismissedTime) ?? 0;
+      if (dismissedTag == tagName) {
+        final elapsed = DateTime.now().millisecondsSinceEpoch - dismissedTime;
+        // Don't auto-prompt again for 24 hours if dismissed
+        if (elapsed < const Duration(hours: 24).inMilliseconds) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Mark the update as dismissed so the dialog doesn't repeatedly appear.
+  static Future<void> markUpdateDismissed(String tagName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefDismissedTag, tagName);
+      await prefs.setInt(_prefDismissedTime, DateTime.now().millisecondsSinceEpoch);
+    } catch (_) {}
+  }
+
+  /// Mark the version as installed when user downloads and initiates installation.
+  static Future<void> markUpdateInstalled(String versionName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final clean = versionName.replaceFirst(RegExp(r'^[vV]'), '').trim();
+      await prefs.setString(_prefInstalledVersion, clean);
+      await prefs.setString(_prefDismissedTag, versionName);
+      await prefs.setInt(_prefDismissedTime, DateTime.now().millisecondsSinceEpoch);
+    } catch (_) {}
+  }
+
   /// Compare two semantic version strings (e.g. "1.0.3" vs "1.0.0").
   /// Returns true if remote is strictly newer than current.
   static bool isNewer(String remote, String current) {
@@ -116,7 +193,7 @@ class UpdateService {
   }
 
   /// Check GitHub Releases API for the latest version.
-  static Future<AppUpdateInfo?> checkForUpdate() async {
+  static Future<AppUpdateInfo?> checkForUpdate({bool checkDismissed = false}) async {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 10);
 
@@ -137,7 +214,12 @@ class UpdateService {
       final tagName = data['tag_name'] as String? ?? '';
       if (tagName.isEmpty) return null;
 
-      final currentVersion = await NativeBridge.getAppVersion();
+      // If requested, ignore if already dismissed within cooldown window
+      if (checkDismissed && await isUpdateDismissed(tagName)) {
+        return null;
+      }
+
+      final currentVersion = await getCurrentVersion();
 
       // Check if remote version is newer
       if (!isNewer(tagName, currentVersion)) {

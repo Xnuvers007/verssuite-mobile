@@ -86,10 +86,10 @@ class _HomePageState extends State<HomePage> {
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     try {
-      final currentVer = await NativeBridge.getAppVersion();
-      final deviceAbi = await NativeBridge.getDeviceAbi();
-      final latest = await UpdateService.checkForUpdate();
+      final latest = await UpdateService.checkForUpdate(checkDismissed: true);
       if (latest != null && mounted) {
+        final currentVer = await UpdateService.getCurrentVersion();
+        final deviceAbi = await NativeBridge.getDeviceAbi();
         await UpdateDialog.show(
           context,
           updateInfo: latest,

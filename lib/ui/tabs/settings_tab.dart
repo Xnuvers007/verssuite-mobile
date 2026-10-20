@@ -402,12 +402,18 @@ class SettingsTab extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Text(
-                            '${l.tr('version')} 1.0.0',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.5),
-                            ),
+                          FutureBuilder<String>(
+                            future: UpdateService.getCurrentVersion(),
+                            builder: (context, snapshot) {
+                              final ver = snapshot.data ?? '1.0.0';
+                              return Text(
+                                '${l.tr('version')} $ver',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -787,7 +793,7 @@ class _UpdateCheckCardState extends State<_UpdateCheckCard> {
   }
 
   Future<void> _loadCurrentVersion() async {
-    final ver = await NativeBridge.getAppVersion();
+    final ver = await UpdateService.getCurrentVersion();
     if (mounted) {
       setState(() => _currentVer = ver);
     }
@@ -800,7 +806,7 @@ class _UpdateCheckCardState extends State<_UpdateCheckCard> {
     });
 
     try {
-      final currentVer = await NativeBridge.getAppVersion();
+      final currentVer = await UpdateService.getCurrentVersion();
       final deviceAbi = await NativeBridge.getDeviceAbi();
       final latest = await UpdateService.getLatestReleaseInfo();
 
@@ -1110,7 +1116,7 @@ class _EventSimulatorCard extends StatelessWidget {
                   color: const Color(0xFF00D4AA),
                   onTap: () async {
                     final deviceAbi = await NativeBridge.getDeviceAbi();
-                    final currentVer = await NativeBridge.getAppVersion();
+                    final currentVer = await UpdateService.getCurrentVersion();
                     if (context.mounted) {
                       await UpdateDialog.show(
                         context,
