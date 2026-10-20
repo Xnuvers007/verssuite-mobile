@@ -179,4 +179,5 @@ class ProxyConfig {
         customForwardedIp: json['customForwardedIp'] ?? '',
         javascriptEnabled: json['javascriptEnabled'] ?? true,
       );
+  }
 }

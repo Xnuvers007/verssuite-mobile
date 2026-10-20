@@ -88,7 +88,7 @@ class BrowserTabState extends State<BrowserTab> {
                  error.description.contains('net::ERR_PROXY_CONNECTION_FAILED'))) {
               CyberBanner.show(
                 context,
-                type: CyberBannerType.warning,
+                type: CyberBannerType.caWarning,
                 title: '🔒 Tunnel Proksi Ditolak (ERR_TUNNEL)',
                 message: 'Sertifikat CA belum terpasang di Android atau situs memiliki SSL Pinning. Ketuk Pasang CA atau matikan Intersepsi HTTPS.',
                 actionLabel: 'Pasang CA',
