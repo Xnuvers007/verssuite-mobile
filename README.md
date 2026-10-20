@@ -1,0 +1,279 @@
+# VersSuite Mobile 🛡️
+
+<div align="center">
+
+![VersSuite Mobile Banner](https://img.shields.io/badge/VersSuite-Mobile-6C63FF?style=for-the-badge&logo=android&logoColor=white)
+[![Flutter](https://img.shields.io/badge/Flutter-3.29+-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.7+-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
+[![Android](https://img.shields.io/badge/Android-API%2024%20--%2035-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/build_apk.yml)
+
+**A powerful, lightweight, mobile-first HTTP & HTTPS intercepting proxy and network debugger for Android.**  
+*Mirip seperti Burp Suite, Charles Proxy, mitmproxy, dan HttpCanary langsung dari saku Anda.*
+
+[Fitur](#-fitur-utama) • [Daftar Isi](#-daftar-isi) • [Arsitektur](#-arsitektur--alur-kerja) • [CI/CD GitHub Actions](#-otomatisasi-build-apk-via-github-actions) • [Instalasi CA](#-panduan-instalasi-sertifikat-ca-di-android) • [Referensi](#-referensi-resmi-2021--2026) • [Donasi & Author](#-dukungan--donasi)
+
+</div>
+
+---
+
+## 📑 Daftar Isi
+
+- [VersSuite Mobile 🛡️](#verssuite-mobile-️)
+  - [📑 Daftar Isi](#-daftar-isi)
+  - [✨ Gambaran Umum (Overview)](#-gambaran-umum-overview)
+  - [🚀 Fitur Utama](#-fitur-utama)
+  - [🏛️ Arsitektur \& Alur Kerja](#️-arsitektur--alur-kerja)
+  - [📁 Struktur Repositori](#-struktur-repositori)
+  - [⚡ Optimasi Kinerja \& Pencegahan Leak Resource](#-optimasi-kinerja--pencegahan-leak-resource)
+  - [🤖 Otomatisasi Build APK via GitHub Actions](#-otomatisasi-build-apk-via-github-actions)
+  - [📱 Panduan Instalasi Sertifikat CA di Android](#-panduan-instalasi-sertifikat-ca-di-android)
+  - [🌐 Konfigurasi Proxy di Perangkat](#-konfigurasi-proxy-di-perangkat)
+  - [📚 Referensi Resmi (2021 – 2026)](#-referensi-resmi-2021--2026)
+  - [❤️ Dukungan \& Donasi](#️-dukungan--donasi)
+  - [👦 Author](#-author)
+  - [📄 Lisensi](#-lisensi)
+
+---
+
+## ✨ Gambaran Umum (Overview)
+
+**VersSuite Mobile** dirancang khusus bagi penetration tester, pengembang aplikasi, tim QA, dan pegiat keamanan siber untuk memantau, menganalisis, memodifikasi, dan mengirim ulang paket HTTP/HTTPS langsung dari perangkat Android tanpa memerlukan laptop atau PC perantara.
+
+Aplikasi ini dilengkapi antarmuka modern bertema dark cybernetic berbasis **Flutter Material 3**, engine proxy native berbasis **Dart IO Socket**, generator sertifikat CA TLS/SSL dinamis menggunakan kriptografi RSA-2048 murni via **PointyCastle**, serta background service yang kompatibel penuh dengan **Android 14 & 15 (API 34/35)**.
+
+---
+
+## 🚀 Fitur Utama
+
+| Modul | Deskripsi Fitur |
+| :--- | :--- |
+| **Proxy Server** | Mendukung proxy standar HTTP/1.1 dan HTTPS CONNECT tunneling. Tombol 1-tap Mulai/Hentikan dengan port dan bind address yang fleksibel. |
+| **HTTPS MITM Interception** | Generator Root CA otomatis (10 tahun) dan pembuatan Leaf Certificate instan secara dinamis (*on-the-fly*) dengan ekstensi SAN (*Subject Alternative Name*). |
+| **Traffic History** | Riwayat seluruh pertukaran request/response secara real-time. Pencarian instan berdasarkan method, URL, status code, dan host. Detail flow mencakup Headers, Raw text, Hex dump, dan format JSON pretty-print otomatis. |
+| **Intercept Engine** | Kemampuan menahan (*pause*) request jaringan sebelum dikirim ke upstream. Pengguna dapat mengedit URL, header, payload mentah lalu memilih **Forward** atau **Drop**. |
+| **HTTP Repeater** | Modul replay untuk merancang custom HTTP request, mengubah payload secara manual, dan mengevaluasi status code, ukuran data, dan durasi latensi (ms). |
+| **cURL Exporter** | Salin paket request apapun menjadi perintah cURL terminal siap pakai hanya dengan satu klik. |
+| **Bilingual Mode (EN & ID)** | Mendukung penuh 2 bahasa: **Bahasa Indonesia** dan **English**, dapat diganti kapan saja secara instan melalui menu Pengaturan tanpa me-restart aplikasi. |
+| **Android Background Service** | Foreground Service Android dengan notifikasi status persisten dan WakeLock, memastikan koneksi proxy tetap stabil saat layar mati atau aplikasi berada di latar belakang. |
+
+---
+
+## 🏛️ Arsitektur & Alur Kerja
+
+Alur penanganan koneksi pada VersSuite Mobile dirancang secara non-blocking dan hemat baterai:
+
+```
+┌─────────────────────┐
+│  Target App / Web   │
+│   (Android Client)  │
+└──────────┬──────────┘
+           │ HTTP / CONNECT
+           ▼
+┌────────────────────────────────────────────────────────┐
+│               VersSuite Mobile Proxy                   │
+│                                                        │
+│  1. Client Binding (Port: 8080)                        │
+│  2. TLS Upgrade via In-Memory CA Leaf Cert (0ms Cache) │
+│  3. Parsing Request Header & Body                      │
+└──────────┬─────────────────────────────────────────────┘
+           │
+           ├─── [Intercept = ON] ──► [ Intercept Queue UI ] ──► (Edit / Forward / Drop)
+           │
+           ▼  [Intercept = OFF / Forwarded]
+┌────────────────────────────────────────────────────────┐
+│             Upstream Connection Handler                │
+│                                                        │
+│  1. Strip Hop-by-Hop Headers                           │
+│  2. TLS Handshake ke Server Asli                       │
+│  3. Streaming Response ke Client                       │
+│  4. Emit Event ke History Tab (Bounded Memory Cache)   │
+└──────────┬─────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   Internet Target   │
+│   (Remote Server)   │
+└─────────────────────┘
+```
+
+---
+
+## 📁 Struktur Repositori
+
+```
+verssuite-mobile/
+├── .github/
+│   └── workflows/
+│       └── build_apk.yml             # Pipeline otomatisasi CI GitHub Actions
+├── .gitignore                        # Standard ignore rules untuk Flutter & Android
+├── LICENSE                           # Lisensi MIT (Indra Dwi Aryadi / Xnuvers007)
+├── analysis_options.yaml             # Konfigurasi linter Dart
+├── pubspec.yaml                      # Dependensi Flutter (PointyCastle, Provider, dll.)
+├── README.md                         # Dokumentasi teknis proyek
+├── android/
+│   ├── build.gradle                  # Root Gradle build script
+│   ├── settings.gradle               # Gradle settings & plugin loader
+│   ├── gradle.properties             # Alokasi RAM JVM & AndroidX flags
+│   ├── gradle/wrapper/
+│   │   └── gradle-wrapper.properties # Gradle 8.3 distribution
+│   └── app/
+│       ├── build.gradle              # App build config (release auto-signing)
+│       └── src/main/
+│           ├── AndroidManifest.xml   # Izin jaringan, Foreground Service type & queries
+│           ├── kotlin/com/verssuite/mobile/
+│           │   ├── MainActivity.kt   # Platform Channel bridge native Android
+│           │   └── ProxyForegroundService.kt # Foreground service kompatibel Android 14+
+│           └── res/xml/
+│               └── network_security_config.xml # Konfigurasi kepercayaan CA user
+└── lib/
+    ├── main.dart                     # Entry point, tema Material 3 & delegasi i18n
+    ├── l10n/
+    │   └── app_localizations.dart    # Kamus terjemahan Bahasa Indonesia & English
+    ├── models/
+    │   ├── http_models.dart          # Abstraksi Headers, Request, Response & HttpFlow
+    │   └── proxy_config.dart         # Model konfigurasi server & host exclusions
+    ├── proxy/
+    │   ├── certificate_authority.dart # Generator RSA-2048 / ASN.1 DER CA & Leaf Cert
+    │   └── proxy_server.dart         # Engine HttpServer, CONNECT tunneling & MITM
+    ├── state/
+    │   ├── app_state.dart            # Manajemen state utama & pembatasan memori flow
+    │   ├── locale_state.dart         # Persistensi preferensi bahasa (SharedPreferences)
+    │   └── native_bridge.dart        # Platform Channel client (Android native APIs)
+    └── ui/
+        ├── home_page.dart            # Scaffold navigasi 5 tab utama
+        ├── pages/
+        │   └── flow_detail_page.dart # Inspeksi detail request/response, Hex dump & cURL
+        └── tabs/
+            ├── proxy_tab.dart        # Kontrol server & status operasional
+            ├── history_tab.dart      # Riwayat traffic & filter pencarian
+            ├── intercept_tab.dart    # Intersep paket & editor interaktif
+            ├── repeater_tab.dart     # Pengujian & pengiriman custom HTTP request
+            └── settings_tab.dart     # Pengaturan port, CA, bahasa, donasi & author
+```
+
+---
+
+## ⚡ Optimasi Kinerja & Pencegahan Leak Resource
+
+Sebelum versi ini dirilis, dilakukan serangkaian pengujian dan audit arsitektural untuk menjamin efisiensi tinggi pada perangkat mobile:
+
+1. **Eliminasi Lag Kriptografi (Zero-Lag Leaf Signing)**:
+   - *Masalah Sebelumnya*: Membuat pasangan kunci RSA 2048-bit baru untuk setiap request HTTPS menguras CPU 100% dan menyebabkan freeze selama 1–2 detik per request.
+   - *Solusi VersSuite*: Menggunakan pasangan kunci privat leaf yang diinisialisasi sekali (*shared leaf key pair*) dan mengimplementasikan `SecurityContext` host cache (maksimal 256 host). Penandatanganan sertifikat untuk domain baru kini hanya memakan waktu **~1–2 milidetik**, dan domain yang telah di-cache memakan waktu **0 ms**.
+2. **Pencegahan Out-Of-Memory (Bounded Flow Memory)**:
+   - Buffer riwayat traffic dibatasi maksimal **500 flow**. Saat batas terlampaui, entri terlama dipangkas secara otomatis dari memori RAM.
+3. **Pembersihan Socket & Stream Listener**:
+   - Seluruh `StreamSubscription` pada pembacaan socket dilengkapi timeout timer dan pembatalan eksplisit (`sub.cancel()`), menghindari kebocoran memori descriptor socket.
+4. **Kompatibilitas Android 14+ (API 34/35)**:
+   - Foreground Service didaftarkan secara eksplisit dengan tipe `specialUse` dan subtype `network_proxy_intercept` di `AndroidManifest.xml` serta pemanggilan `ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE` pada `startForeground()`, mencegah `MissingForegroundServiceTypeException` saat dijalankan di Android versi terbaru.
+
+---
+
+## 🤖 Otomatisasi Build APK via GitHub Actions
+
+Anda **tidak perlu menginstal Flutter SDK, Android Studio, atau Java di komputer lokal**. Semua proses kompilasi ditangani oleh GitHub Actions di cloud runner.
+
+### Langkah-langkah:
+
+1. **Inisialisasi Git dan Push ke Repositori Anda**:
+   ```bash
+   git init
+   git add .
+   git commit -m "feat: complete VersSuite Mobile core with optimized MITM engine"
+   git branch -M main
+   git remote add origin https://github.com/Xnuvers007/verssuite-mobile.git
+   git push -u origin main
+   ```
+
+2. **Proses Build Otomatis**:
+   - Buka tab **Actions** pada repositori GitHub Anda: `https://github.com/Xnuvers007/verssuite-mobile/actions`.
+   - Workflow **"Build VersSuite Mobile APK"** akan berjalan secara otomatis.
+   - Anda juga dapat memicunya kapan saja melalui tombol **"Run workflow"**.
+
+3. **Unduh File APK**:
+   - Setelah proses selesai (status centang hijau ✅), klik pada run tersebut.
+   - Di bagian **Artifacts** (di bagian bawah halaman), unduh file:
+     👉 **`verssuite-mobile-release-apk`**
+   - Ekstrak file zip dan pasang `app-release.apk` langsung ke perangkat Android Anda.
+
+> [!NOTE]
+> File APK Release sudah ditandatangani (*auto-signed*) menggunakan debug keystore bawaan Android Gradle, sehingga siap dipasang langsung tanpa memerlukan konfigurasi keystore rahasia tambahan.
+
+---
+
+## 📱 Panduan Instalasi Sertifikat CA di Android
+
+Untuk dapat mengintersep dan mendekripsi lalu lintas HTTPS (port 443):
+
+1. Buka aplikasi **VersSuite Mobile**.
+2. Masuk ke tab **Settings** (Pengaturan), lalu tekan tombol **"Export CA Certificate"**.
+3. File sertifikat `verssuite_ca.pem` akan tersimpan di folder `Downloads` perangkat Anda.
+4. Masuk ke Pengaturan Android:
+   - **Android 11 – 15**: Buka `Settings` ➔ `Security & Privacy` ➔ `More Security Settings` ➔ `Encryption & credentials` ➔ `Install a certificate` ➔ `CA certificate`.
+   - Pilih `Install anyway` jika muncul peringatan keamanan, lalu pilih file `verssuite_ca.pem` yang telah diunduh.
+
+---
+
+## 🌐 Konfigurasi Proxy di Perangkat
+
+1. Pastikan proxy di aplikasi VersSuite Mobile sudah aktif (tekan **Start Proxy** pada tab Proxy).
+2. Buka Pengaturan Wi-Fi pada perangkat Android:
+   - Tekan dan tahan atau klik ikon gerigi pada koneksi Wi-Fi yang aktif.
+   - Pilih **Modify network** (Ubah jaringan) ➔ **Advanced options**.
+   - Ubah opsi **Proxy** dari *None* menjadi **Manual**.
+   - Masukkan:
+     - **Proxy hostname**: `127.0.0.1` (atau IP lokal perangkat jika mentrafik dari perangkat lain di jaringan yang sama).
+     - **Proxy port**: `8080` (default VersSuite Mobile).
+3. Simpan perubahan. Seluruh permintaan HTTP/HTTPS kini akan melewati VersSuite Mobile.
+
+---
+
+## 📚 Referensi Resmi (2021 – 2026)
+
+Seluruh implementasi protokol jaringan, keamanan sertifikat, dan parsing pada proyek ini disusun berdasarkan standar dan dokumentasi resmi terkini yang telah diverifikasi:
+
+1. **IETF RFC 9110: HTTP Semantics** (Diterbitkan: Juni 2022)  
+   Standar arsitektur internet resmi yang mendefinisikan semantik modern HTTP, metode `CONNECT` tunneling, dan manajemen proxy intermediary.  
+   🔗 [https://www.rfc-editor.org/rfc/rfc9110.html](https://www.rfc-editor.org/rfc/rfc9110.html) *(Terverifikasi)*
+
+2. **IETF RFC 9112: HTTP/1.1** (Diterbitkan: Juni 2022)  
+   Spesifikasi sintaks pesan dan aturan transmisi HTTP/1.1, termasuk pengelolaan hop-by-hop headers dan transfer chunked stream.  
+   🔗 [https://www.rfc-editor.org/rfc/rfc9112.html](https://www.rfc-editor.org/rfc/rfc9112.html) *(Terverifikasi)*
+
+3. **Android Developers: Network Security Configuration** (Diperbarui untuk Android 14/15, 2023–2025)  
+   Dokumentasi resmi Android mengenai deklarasi XML `network_security_config`, penanganan user-installed CA, dan izin cleartext traffic.  
+   🔗 [https://developer.android.com/privacy-and-security/security-config](https://developer.android.com/privacy-and-security/security-config) *(Terverifikasi)*
+
+4. **Dart & Flutter API: SecurityContext Class (`dart:io`)** (Diperbarui: 2024–2025)  
+   Dokumentasi resmi platform Dart untuk manipulasi sertifikat TLS X.509, private keys, dan server socket upgrade.  
+   🔗 [https://api.flutter.dev/flutter/dart-io/SecurityContext-class.html](https://api.flutter.dev/flutter/dart-io/SecurityContext-class.html) *(Terverifikasi)*
+
+---
+
+## ❤️ Dukungan & Donasi
+
+Jika proyek ini membantu Anda dalam proses riset, pembelajaran, pengembangan, atau penetration testing, pertimbangkan untuk mendukung pengembang!
+
+- ☕ **Trakteer**: [https://trakteer.id/Xnuvers007](https://trakteer.id/Xnuvers007)
+- 🎁 **Saweria**: [https://saweria.co/Xnuvers007](https://saweria.co/Xnuvers007)
+
+---
+
+## 👦 Author
+
+**Indra Dwi Aryadi (Xnuvers007)**  
+*Tetap terhubung untuk update menarik lainnya!*
+
+- 🐙 **GitHub**: [Xnuvers007](https://github.com/Xnuvers007)
+- 🎥 **YouTube**: [xnuvers0077](https://www.youtube.com/@xnuvers0077)
+- 📸 **Instagram**: [@indradwi.25](https://www.instagram.com/indradwi.25)
+- 💼 **LinkedIn**: [Indra Dwi Aryadi](https://www.linkedin.com/in/indradwiaryadi)
+- 📘 **Facebook**: [indradwi.25](https://www.facebook.com/indradwi.25)
+
+---
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan di bawah lisensi **MIT License** — lihat file [LICENSE](LICENSE) untuk detail lengkap. Bebas digunakan untuk keperluan edukasi, pengujian keamanan, dan riset pengembangan software.

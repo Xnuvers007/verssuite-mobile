@@ -1,0 +1,28 @@
+name: verssuite_mobile
+description: "VersSuite Mobile - Android HTTP/HTTPS traffic interceptor and proxy tool, like BurpSuite for mobile."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+  flutter: ">=3.29.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  pointycastle: 3.9.1
+  shared_preferences: ^2.3.4
+  path_provider: ^2.1.5
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,74 @@
+import 'dart:typed_data';
+
+import 'package:flutter/services.dart';
+
+/// Bridge to Android native code via MethodChannel.
+class NativeBridge {
+  static const _channel = MethodChannel('com.verssuite.mobile/native');
+
+  static Future<String> getFilesDir() async {
+    final result = await _channel.invokeMethod<String>('getFilesDir');
+    return result ?? '/data/data/com.verssuite.mobile/files';
+  }
+
+  static Future<bool> startForegroundService() async {
+    try {
+      await _channel.invokeMethod('startForegroundService');
+      return true;
+    } catch (e) {
+      print('[NativeBridge] startForegroundService error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> stopForegroundService() async {
+    try {
+      await _channel.invokeMethod('stopForegroundService');
+      return true;
+    } catch (e) {
+      print('[NativeBridge] stopForegroundService error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> saveCertToDownloads(
+      Uint8List bytes, String filename) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'saveCertToDownloads',
+        {'bytes': bytes, 'filename': filename},
+      );
+      return result ?? false;
+    } catch (e) {
+      print('[NativeBridge] saveCertToDownloads error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> acquireWakeLock() async {
+    try {
+      await _channel.invokeMethod('acquireWakeLock');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> releaseWakeLock() async {
+    try {
+      await _channel.invokeMethod('releaseWakeLock');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> openUrl(String url) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('openUrl', {'url': url});
+      return res ?? true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
