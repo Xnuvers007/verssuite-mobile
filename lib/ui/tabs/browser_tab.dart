@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/proxy_config.dart';
 import '../../state/app_state.dart';
+import '../widgets/ca_install_dialog.dart';
 import '../widgets/cyber_banner.dart';
 import '../widgets/web_devtools_modal.dart';
 
@@ -92,9 +93,7 @@ class BrowserTabState extends State<BrowserTab> {
                 title: '🔒 Tunnel Proksi Ditolak (ERR_TUNNEL)',
                 message: 'Sertifikat CA belum terpasang di Android atau situs memiliki SSL Pinning. Ketuk Pasang CA atau matikan Intersepsi HTTPS.',
                 actionLabel: 'Pasang CA',
-                onAction: () async {
-                  await appState.installCA();
-                },
+                onAction: () => CaInstallDialog.show(context),
               );
             } else if (mounted &&
                 (error.description.contains('net::ERR_INTERNET_DISCONNECTED') ||

@@ -69,6 +69,10 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARG", "bytes is null", null)
                     }
                 }
+                "openSecuritySettings" -> {
+                    val ok = openSecuritySettings()
+                    result.success(ok)
+                }
                 "acquireWakeLock" -> {
                     acquireWakeLock()
                     result.success(true)
@@ -150,27 +154,52 @@ class MainActivity : FlutterActivity() {
         stopService(intent)
     }
 
+    private fun openSecuritySettings(): Boolean {
+        val intents = listOf(
+            Intent(Settings.ACTION_SECURITY_SETTINGS),
+            Intent("android.settings.SECURITY_SETTINGS"),
+            Intent("com.android.settings.SECURITY_SETTINGS"),
+            Intent(Settings.ACTION_SETTINGS)
+        )
+        for (intent in intents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+        }
+        return false
+    }
+
     private fun installCaCert(bytes: ByteArray, name: String): Boolean {
+        saveBytesToDownloads(bytes, "verssuite_ca.pem")
+        saveBytesToDownloads(bytes, "verssuite_ca.crt")
+
         return try {
-            val intent = KeyChain.createInstallIntent().apply {
-                putExtra(KeyChain.EXTRA_CERTIFICATE, bytes)
-                putExtra(KeyChain.EXTRA_NAME, name)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                val intent = KeyChain.createInstallIntent().apply {
+                    putExtra(KeyChain.EXTRA_CERTIFICATE, bytes)
+                    putExtra(KeyChain.EXTRA_NAME, name)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                true
+            } else {
+                openSecuritySettings()
             }
-            startActivity(intent)
-            true
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            openSecuritySettings()
         }
     }
 
     private fun saveBytesToDownloads(bytes: ByteArray, filename: String): Boolean {
         return try {
+            val mime = if (filename.endsWith(".crt")) "application/x-x509-ca-cert" else "application/x-pem-file"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val values = ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, filename)
-                    put(MediaStore.Downloads.MIME_TYPE, "application/x-pem-file")
+                    put(MediaStore.Downloads.MIME_TYPE, mime)
                     put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 }
                 val uri: Uri? = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)

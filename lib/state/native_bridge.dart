@@ -59,6 +59,16 @@ class NativeBridge {
     }
   }
 
+  static Future<bool> openSecuritySettings() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('openSecuritySettings');
+      return result ?? false;
+    } catch (e) {
+      print('[NativeBridge] openSecuritySettings error: $e');
+      return false;
+    }
+  }
+
   static Future<bool> acquireWakeLock() async {
     try {
       await _channel.invokeMethod('acquireWakeLock');

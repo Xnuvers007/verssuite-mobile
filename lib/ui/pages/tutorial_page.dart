@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
+import '../widgets/ca_install_dialog.dart';
 
 /// Interactive visual tutorial and setup guide for VersSuite Mobile.
 class TutorialPage extends StatefulWidget {
@@ -155,25 +156,10 @@ class _CertInstallTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final ok = await appState.installCA();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(ok
-                                  ? (isIndonesian
-                                      ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
-                                      : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
-                                  : 'Gagal membuka installer sertifikat Android.'),
-                              backgroundColor: const Color(0xFF00D4AA),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: () => CaInstallDialog.show(context),
                       icon: const Icon(Icons.security, size: 16),
                       label: Text(
-                        isIndonesian ? 'Pasang Langsung (1-Tap)' : 'Install CA (1-Tap)',
+                        isIndonesian ? 'Pasang Sertifikat CA' : 'Install CA Certificate',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(

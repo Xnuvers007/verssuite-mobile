@@ -111,14 +111,20 @@ class AppState extends ChangeNotifier {
 
   Future<bool> exportCA() async {
     if (_ca == null || !_ca!.ready) return false;
-    return await NativeBridge.saveCertToDownloads(
+    final pemOk = await NativeBridge.saveCertToDownloads(
       _ca!.caCertBytes,
       'verssuite_ca.pem',
     );
+    await NativeBridge.saveCertToDownloads(
+      _ca!.caCertBytes,
+      'verssuite_ca.crt',
+    );
+    return pemOk;
   }
 
   Future<bool> installCA() async {
     if (_ca == null || !_ca!.ready) return false;
+    await exportCA();
     return await NativeBridge.installCaCert(_ca!.caCertBytes);
   }
 

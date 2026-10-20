@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_state.dart';
 import '../pages/tutorial_page.dart';
+import '../widgets/ca_install_dialog.dart';
 import '../widgets/cyber_banner.dart';
 
 class ProxyTab extends StatelessWidget {
@@ -398,23 +399,7 @@ class _ConfigInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
-              onPressed: () async {
-                final appState = Provider.of<AppState>(context, listen: false);
-                final ok = await appState.installCA();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(ok
-                          ? (isIndonesian
-                              ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
-                              : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
-                          : 'Gagal membuka installer sertifikat Android.'),
-                      backgroundColor: const Color(0xFF00D4AA),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
+              onPressed: () => CaInstallDialog.show(context),
               icon: const Icon(Icons.security, size: 16),
               label: Text(
                 isIndonesian
@@ -487,23 +472,7 @@ class _CAStatusCard extends StatelessWidget {
             ),
             if (ready)
               OutlinedButton.icon(
-                onPressed: () async {
-                  final appState = Provider.of<AppState>(context, listen: false);
-                  final ok = await appState.installCA();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(ok
-                            ? (isIndonesian
-                                ? 'Membuka pemasang sertifikat Android... Beri nama "VersSuite CA" lalu tekan OK.'
-                                : 'Opening Android cert installer... Name it "VersSuite CA" and tap OK.')
-                            : 'Gagal membuka installer sertifikat Android.'),
-                        backgroundColor: const Color(0xFF00D4AA),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                },
+                onPressed: () => CaInstallDialog.show(context),
                 icon: const Icon(Icons.install_mobile, size: 16),
                 label: Text(isIndonesian ? 'Pasang CA' : 'Install CA'),
                 style: OutlinedButton.styleFrom(
