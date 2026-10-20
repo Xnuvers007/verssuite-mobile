@@ -30,6 +30,11 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Enable Chrome DevTools Remote Debugging via chrome://inspect
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            android.webkit.WebView.setWebContentsDebuggingEnabled(true)
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getFilesDir" -> {

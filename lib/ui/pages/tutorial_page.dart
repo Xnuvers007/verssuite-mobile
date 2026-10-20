@@ -496,6 +496,13 @@ class _InAppBrowserTab extends StatelessWidget {
               ? 'Tersedia tombol "Cek IP Saya" untuk memeriksa IP publik, serta fitur injeksi header X-Forwarded-For untuk simulasi asal IP target.'
               : 'Includes a 1-tap "Check My IP" utility and custom X-Forwarded-For header simulation.',
         ),
+        _StepItem(
+          stepNumber: '5',
+          title: isIndonesian ? 'Web DevTools (Elements, Console, Network, Storage)' : 'Web DevTools (Elements, Console, Network, Storage)',
+          desc: isIndonesian
+              ? 'Tekan ikon kode (</>) di sebelah kanan address bar untuk membuka In-App DevTools lengkap: inspeksi pohon DOM (Elements), jalankan script di Console REPL, periksa Cookies & LocalStorage, atau aktifkan Eruda Mobile DevTools untuk tombol inspeksi melayang di website!'
+              : 'Tap the code icon (</>) on the address bar to open full In-App DevTools: live DOM tree inspection (Elements), Console REPL, Cookies & Storage inspector, or launch Eruda Mobile DevTools for an interactive floating inspector on the webpage!',
+        ),
       ],
     );
   }

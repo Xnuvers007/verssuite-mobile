@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/proxy_config.dart';
 import '../../state/app_state.dart';
 import '../widgets/cyber_banner.dart';
+import '../widgets/web_devtools_modal.dart';
 
 /// Full-featured in-app browser with custom UA, IP simulation, search engines,
 /// and browser controls matching modern desktop & mobile inspection tools.
@@ -182,6 +183,14 @@ class BrowserTabState extends State<BrowserTab> {
     }
   }
 
+  void _openDevTools(BuildContext context) {
+    WebDevToolsModal.show(
+      context,
+      controller: _controller,
+      currentUrl: _urlController.text,
+    );
+  }
+
   void _openCustomizationSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -195,6 +204,7 @@ class BrowserTabState extends State<BrowserTab> {
         onRefresh: () => _controller.reload(),
         onClearCache: _clearCacheAndCookies,
         onNavigate: _loadUrl,
+        onOpenDevTools: () => _openDevTools(context),
       ),
     );
   }
@@ -415,7 +425,16 @@ class BrowserTabState extends State<BrowserTab> {
 
                 const SizedBox(width: 4),
 
-                // 6. Customization / Settings Action Button (User-Agent, IP, Search Engine)
+                // 6. Developer Tools (Elements, Console, Network, Storage)
+                IconButton(
+                  icon: const Icon(Icons.code_rounded, size: 20),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Web DevTools (Elements, Console, Storage)',
+                  color: const Color(0xFF00D4AA),
+                  onPressed: () => _openDevTools(context),
+                ),
+
+                // 7. Customization / Settings Action Button (User-Agent, IP, Search Engine)
                 IconButton(
                   icon: const Icon(Icons.tune_rounded, size: 20),
                   visualDensity: VisualDensity.compact,
@@ -443,6 +462,16 @@ class BrowserTabState extends State<BrowserTab> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
+                _QuickChip(
+                  label: '🛠️ Elements & Console',
+                  icon: Icons.code,
+                  onTap: () => _openDevTools(context),
+                ),
+                _QuickChip(
+                  label: '🚀 Eruda Mobile Inspector',
+                  icon: Icons.terminal,
+                  onTap: () => WebDevToolsModal.launchEruda(_controller, context),
+                ),
                 _QuickChip(
                   label: 'Google',
                   icon: Icons.search,
@@ -494,12 +523,14 @@ class _BrowserCustomizationModal extends StatefulWidget {
   final VoidCallback onRefresh;
   final VoidCallback onClearCache;
   final void Function(String) onNavigate;
+  final VoidCallback onOpenDevTools;
 
   const _BrowserCustomizationModal({
     required this.controller,
     required this.onRefresh,
     required this.onClearCache,
     required this.onNavigate,
+    required this.onOpenDevTools,
   });
 
   @override
@@ -569,6 +600,60 @@ class _BrowserCustomizationModalState
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // ─── 0. Developer Options & DevTools ───────────────────
+          _HeaderLabel(
+            title: isIndonesian ? 'Opsi Pengembang & Web DevTools' : 'Developer Options & DevTools',
+            subtitle: isIndonesian
+                ? 'Inspeksi DOM Elements (HTML), Console JS, Cookies, dan Network'
+                : 'Inspect DOM Elements (HTML), JS Console, Cookies, and Network',
+          ),
+          const SizedBox(height: 8),
+          Card(
+            color: const Color(0xFF141428),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.code_rounded, color: Color(0xFF00D4AA)),
+                  title: Text(
+                    isIndonesian ? 'Buka In-App Web DevTools' : 'Open In-App Web DevTools',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                  ),
+                  subtitle: Text(
+                    isIndonesian
+                        ? 'Pohon Elements, Console REPL, Cookies, dan Storage'
+                        : 'Live DOM tree, Console REPL, Cookies, and Storage',
+                    style: const TextStyle(fontSize: 11, color: Colors.white54),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white38),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onOpenDevTools();
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.rocket_launch, color: Color(0xFF6C63FF)),
+                  title: const Text(
+                    'Aktifkan Eruda Mobile DevTools',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                  ),
+                  subtitle: Text(
+                    isIndonesian
+                        ? 'Tombol melayang di halaman web untuk inspeksi mirip browser PC'
+                        : 'Floating button on web page for desktop-like DevTools inspection',
+                    style: const TextStyle(fontSize: 11, color: Colors.white54),
+                  ),
+                  trailing: const Icon(Icons.play_circle_outline, color: Color(0xFF6C63FF)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    WebDevToolsModal.launchEruda(widget.controller, context);
+                  },
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
