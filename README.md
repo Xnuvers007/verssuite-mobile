@@ -5,14 +5,15 @@
 ![VersSuite Mobile Banner](https://img.shields.io/badge/VersSuite-Mobile-6C63FF?style=for-the-badge&logo=android&logoColor=white)
 [![Flutter](https://img.shields.io/badge/Flutter-3.29+-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.7+-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
-[![Android](https://img.shields.io/badge/Android-API%2024%20--%2035-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
+[![Android](https://img.shields.io/badge/Android-API%2024%20--%2036-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
+[![GitHub Release](https://img.shields.io/badge/Release-APK_Download-00D4AA?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Xnuvers007/verssuite-mobile/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
-[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/build_apk.yml)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-Auto_Release-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/build_apk.yml)
 
 **A powerful, lightweight, mobile-first HTTP & HTTPS intercepting proxy and network debugger for Android.**  
 *Mirip seperti Burp Suite, Charles Proxy, mitmproxy, dan HttpCanary langsung dari saku Anda.*
 
-[Fitur](#-fitur-utama) • [Daftar Isi](#-daftar-isi) • [Arsitektur](#-arsitektur--alur-kerja) • [CI/CD GitHub Actions](#-otomatisasi-build-apk-via-github-actions) • [Instalasi CA](#-panduan-instalasi-sertifikat-ca-di-android) • [Referensi](#-referensi-resmi-2021--2026) • [Donasi & Author](#-dukungan--donasi)
+[📥 Unduh APK (GitHub Releases)](https://github.com/Xnuvers007/verssuite-mobile/releases) • [Fitur](#-fitur-utama) • [Daftar Isi](#-daftar-isi) • [Arsitektur](#-arsitektur--alur-kerja) • [CI/CD Auto-Release](#-otomatisasi-build-apk--rilis-otomatis-via-github-actions) • [Instalasi CA](#-panduan-instalasi-sertifikat-ca-di-android) • [Referensi](#-referensi-resmi-2021--2026) • [Donasi & Author](#-dukungan--donasi)
 
 </div>
 
@@ -173,44 +174,41 @@ Sebelum versi ini dirilis, dilakukan serangkaian pengujian dan audit arsitektura
 
 ---
 
-## 🤖 Otomatisasi Build APK via GitHub Actions
+## 🤖 Otomatisasi Build APK & Rilis Otomatis via GitHub Actions
 
-Anda **tidak perlu menginstal Flutter SDK, Android Studio, atau Java di komputer lokal**. Semua proses kompilasi ditangani oleh GitHub Actions di cloud runner.
+Anda **tidak perlu menginstal Flutter SDK, Android Studio, atau Java di komputer lokal**. Semua proses kompilasi, pembuatan versi rilis (*auto-versioning*), rangkuman perubahan (*auto-changelog*), dan pengunggahan aset ke GitHub Releases ditangani secara otomatis oleh GitHub Actions di cloud runner.
 
-### Langkah-langkah:
+### 🌟 Alur Kerja Otomatis (CI/CD Pipeline):
 
-1. **Inisialisasi Git dan Push ke Repositori Anda**:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: complete VersSuite Mobile core with optimized MITM engine"
-   git branch -M main
-   git remote add origin https://github.com/Xnuvers007/verssuite-mobile.git
-   git push -u origin main
-   ```
+1. **Trigger Otomatis Setiap Push ke `main`**:
+   - Setiap kali Anda melakukan `git push origin main` atau membuat git tag (`v*`), workflow GitHub Actions langsung terpicu secara otomatis.
+   - Menggunakan `fetch-depth: 0` untuk melacak seluruh riwayat komit dari rilis sebelumnya.
 
-2. **Proses Build Otomatis**:
-   - Buka tab **Actions** pada repositori GitHub Anda: `https://github.com/Xnuvers007/verssuite-mobile/actions`.
-   - Workflow **"Build VersSuite Mobile APK"** akan berjalan secara otomatis.
-   - Anda juga dapat memicunya kapan saja melalui tombol **"Run workflow"**.
+2. **Auto-Versioning & Git Tagging**:
+   - Skrip pipeline membaca nomor versi dasar dari `pubspec.yaml` (misal `1.0`) dan secara otomatis menyusun tag versi dinamis: `v1.0.<build_number>` (contoh: `v1.0.1`, `v1.0.2`, dst).
+   - Tag rilis di-tag ke Git dan di-push ke remote repository secara otomatis.
 
-3. **Unduh File APK Ramping (Optimized & Split-per-ABI)**:
-   - Setelah proses selesai (status centang hijau ✅), klik pada run tersebut.
-   - Di bagian **Artifacts** (di bagian bawah halaman), unduh file:
-     👉 **`verssuite-mobile-release-apks`**
-   - Ekstrak file zip. Anda akan mendapatkan pilihan APK yang dioptimalkan:
-     - 🚀 **`app-arm64-v8a-release.apk`** *(Ukuran super ringan ~10–15 MB)*: **Sangat direkomendasikan** untuk 95%+ smartphone Android masa kini.
-     - 📱 **`app-armeabi-v7a-release.apk`** *(Ukuran ~9–13 MB)*: Untuk smartphone Android 32-bit lawas.
-     - 💻 **`app-x86_64-release.apk`** *(Ukuran ~14–18 MB)*: Untuk Android Emulator / PC / Chromebook.
-     - 📦 **`app-release.apk`** *(Universal)*: Menggabungkan seluruh arsitektur sekaligus dalam satu file.
+3. **Auto-Generate Changelogs & SHA-256 Checksums**:
+   - Merangkum daftar komit dan link diff perbandingan sejak rilis terakhir (`git describe`).
+   - Menghitung nilai hash kriptografis **SHA-256** untuk setiap file APK demi jaminan integritas keamanan bagi pengguna.
+
+4. **Auto-Upload ke Halaman GitHub Releases**:
+   - Semua APK siap unduh langsung diunggah ke:  
+     👉 **[https://github.com/Xnuvers007/verssuite-mobile/releases](https://github.com/Xnuvers007/verssuite-mobile/releases)**
+   - File APK diberi penamaan yang jelas dan terstruktur:
+     - 🚀 `verssuite-mobile-v1.0.X-arm64-v8a.apk` *(~10–15 MB)*: **Rekomendasi Utama** untuk smartphone & tablet Android 64-bit modern.
+     - 📱 `verssuite-mobile-v1.0.X-armeabi-v7a.apk` *(~9–13 MB)*: Untuk ponsel Android 32-bit lawas.
+     - 💻 `verssuite-mobile-v1.0.X-x86_64.apk` *(~14–18 MB)*: Untuk Android Studio Emulator, WSA, & Chromebook.
+     - 📦 `verssuite-mobile-v1.0.X-universal.apk`: Paket APK all-in-one yang kompatibel di semua arsitektur.
+     - 🔒 `SHA256SUMS.txt`: File checksum verifikasi hash.
 
 > [!TIP]
 > **Mengapa sizenya sangat kecil?**
 > Pipeline build VersSuite Mobile menggunakan:
 > 1. **ProGuard / R8 Shrinking**: Menghapus kelas dan resource Java/Android yang tidak digunakan.
-> 2. **Icon Tree-Shaking**: Memangkas glyph icon yang tidak terpakai dari font asset.
+> 2. **Icon Tree-Shaking**: Memangkas glyph icon yang tidak terpakai dari font asset (menghemat hingga 99.3%).
 > 3. **Split-per-ABI**: Memisahkan binary native C++/AOT untuk masing-masing arsitektur CPU, sehingga APK tidak membengkak karena library arsitektur lain.
-> 4. **AOT Bytecode Obfuscation**: Memisahkan tabel simbol debug dari binary `libapp.so`.
+> 4. **AOT Bytecode Optimization**: Mengkompilasi Dart langsung ke binary native Android ARM/x86.
 
 > [!NOTE]
 > File APK Release sudah ditandatangani (*auto-signed*) menggunakan debug keystore bawaan Android Gradle, sehingga siap dipasang langsung tanpa memerlukan konfigurasi keystore rahasia tambahan.

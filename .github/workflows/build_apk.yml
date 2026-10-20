@@ -1,4 +1,4 @@
-name: Build VersSuite Mobile APK
+name: Build & Release VersSuite Mobile APK
 
 on:
   push:
@@ -13,13 +13,29 @@ permissions:
   contents: write
 
 jobs:
-  build-apk:
-    name: Build Ultra-Lightweight Android APK
+  build-and-release:
+    name: Build & Release Ultra-Lightweight Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository with full history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Version & Tag Name
+        id: versioning
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            BASE_VER=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d '[:space:]')
+            MAJOR_MINOR=$(echo "$BASE_VER" | cut -d'.' -f1,2)
+            VERSION="v${MAJOR_MINOR}.${{ github.run_number }}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Determined Release Version: ${VERSION}"
 
       - name: Set up Java 17 (Temurin)
         uses: actions/setup-java@v4
@@ -53,22 +69,148 @@ jobs:
             --tree-shake-icons \
             --android-skip-build-dependency-validation
 
-      - name: List Generated APKs & Sizes
+      - name: Organize & Package Release APKs with SHA-256 Checksums
         run: |
-          echo "=== Generated APK Files & Sizes ==="
-          ls -lh build/app/outputs/flutter-apk/*.apk
+          mkdir -p release-apks
+          for f in build/app/outputs/flutter-apk/*.apk; do
+            [ -f "$f" ] || continue
+            fname=$(basename "$f")
+            case "$fname" in
+              *arm64-v8a*)
+                cp "$f" "release-apks/verssuite-mobile-${VERSION}-arm64-v8a.apk"
+                ;;
+              *armeabi-v7a*)
+                cp "$f" "release-apks/verssuite-mobile-${VERSION}-armeabi-v7a.apk"
+                ;;
+              *x86_64*)
+                cp "$f" "release-apks/verssuite-mobile-${VERSION}-x86_64.apk"
+                ;;
+              *app-release.apk)
+                cp "$f" "release-apks/verssuite-mobile-${VERSION}-universal.apk"
+                ;;
+              *)
+                cp "$f" "release-apks/${fname}"
+                ;;
+            esac
+          done
 
-      - name: Upload Optimized APK Artifacts
+          cd release-apks
+          sha256sum *.apk > SHA256SUMS.txt
+          echo "=== SHA-256 Checksums ==="
+          cat SHA256SUMS.txt
+
+      - name: Generate Release Notes & Changelog
+        run: |
+          python3 -c '
+          import os, subprocess
+
+          version = os.environ.get("VERSION", "v1.0.0")
+          repo = os.environ.get("GITHUB_REPOSITORY", "Xnuvers007/verssuite-mobile")
+          sha = os.environ.get("GITHUB_SHA", "")
+
+          try:
+              prev_tag = subprocess.check_output(
+                  ["git", "describe", "--tags", "--abbrev=0", f"{sha}^"],
+                  stderr=subprocess.DEVNULL,
+                  text=True
+              ).strip()
+          except Exception:
+              prev_tag = ""
+
+          if prev_tag:
+              log_cmd = [
+                  "git", "log", f"{prev_tag}..{sha}",
+                  f"--pretty=format:* %s ([%h](https://github.com/{repo}/commit/%H))",
+                  "--reverse"
+              ]
+              header = f"Commits since `{prev_tag}` ([Full Diff](https://github.com/{repo}/compare/{prev_tag}...{version})):"
+          else:
+              log_cmd = [
+                  "git", "log", "-n", "25",
+                  f"--pretty=format:* %s ([%h](https://github.com/{repo}/commit/%H))",
+                  "--reverse"
+              ]
+              header = "Recent commits in this release:"
+
+          try:
+              changelog = subprocess.check_output(log_cmd, text=True).strip()
+          except Exception:
+              changelog = f"* Automated release build for commit [{sha[:7]}](https://github.com/{repo}/commit/{sha})"
+
+          if not changelog:
+              changelog = f"* Automated build release for commit [{sha[:7]}](https://github.com/{repo}/commit/{sha})"
+
+          sha256_content = ""
+          if os.path.exists("release-apks/SHA256SUMS.txt"):
+              with open("release-apks/SHA256SUMS.txt") as f:
+                  sha256_content = f.read().strip()
+
+          body = f"""## 🚀 VersSuite Mobile Release `{version}`
+
+          > **VersSuite Mobile** is a powerful on-device HTTP/HTTPS traffic interceptor, proxy, and penetration testing toolkit for Android (Burp Suite alternative).
+
+          ### 📦 Download Release APKs
+
+          Pilih file APK yang sesuai dengan arsitektur perangkat Anda:
+
+          | Architecture | APK File | Recommended For |
+          |:---|:---|:---|
+          | **ARM64 (64-bit)** | `verssuite-mobile-{version}-arm64-v8a.apk` | Modern Android phones & tablets (Android 9–15+) |
+          | **ARMv7 (32-bit)** | `verssuite-mobile-{version}-armeabi-v7a.apk` | Older 32-bit Android phones |
+          | **x86_64** | `verssuite-mobile-{version}-x86_64.apk` | Android Studio Emulator, WSA, Chromebooks |
+          | **Universal** | `verssuite-mobile-{version}-universal.apk` | All-in-one APK (runs on all architectures) |
+
+          ### 🔒 Checksums (SHA-256)
+          ```text
+          {sha256_content}
+          ```
+
+          ### 📝 Changelog / Catatan Perubahan
+          {header}
+
+          {changelog}
+
+          ---
+          ### 📱 Quick Start
+          1. Unduh dan install APK yang sesuai dengan arsitektur perangkat Anda (disarankan **ARM64** untuk ponsel modern).
+          2. Buka **VersSuite Mobile**, masuk ke tab **Proxy** dan aktifkan proxy engine.
+          3. Buka tab **Tutorial** untuk panduan instalasi Sertifikat Root CA (`verssuite_ca.pem`) ke trust store Android Anda.
+          4. Hubungkan perangkat melalui Wi-Fi proxy manual (`127.0.0.1:8080`) atau gunakan Browser internal untuk mulai menganalisis lalu lintas data.
+          """
+
+          with open("release_body.md", "w", encoding="utf-8") as f:
+              f.write(body)
+          '
+
+          echo "=== Generated Release Notes ==="
+          cat release_body.md
+
+      - name: Upload Artifacts (Build Run)
         uses: actions/upload-artifact@v4
         with:
-          name: verssuite-mobile-release-apks
-          path: build/app/outputs/flutter-apk/*.apk
+          name: verssuite-mobile-${{ env.VERSION }}-apks
+          path: release-apks/*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create Release (on Git Tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Push Git Release Tag
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${VERSION}" -m "Release ${VERSION}" || true
+          git push origin "${VERSION}" || true
+
+      - name: Publish GitHub Release
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))
         uses: softprops/action-gh-release@v2
         with:
-          files: build/app/outputs/flutter-apk/*.apk
+          tag_name: ${{ env.VERSION }}
+          name: "VersSuite Mobile ${{ env.VERSION }}"
+          body_path: release_body.md
+          files: release-apks/*
+          draft: false
+          prerelease: false
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

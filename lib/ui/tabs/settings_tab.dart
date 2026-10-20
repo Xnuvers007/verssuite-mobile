@@ -406,6 +406,13 @@ class SettingsTab extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  _LinkButton(
+                    icon: Icons.system_update_alt_rounded,
+                    label: 'GitHub Releases (Download APK Update)',
+                    url: 'https://github.com/Xnuvers007/verssuite-mobile/releases',
+                    color: const Color(0xFF00D4AA),
+                  ),
                 ],
               ),
             ),
@@ -506,6 +513,12 @@ class SettingsTab extends StatelessWidget {
                     subtitle: 'Xnuvers007',
                     url: 'https://github.com/Xnuvers007',
                     icon: Icons.code,
+                  ),
+                  _SocialTile(
+                    title: 'GitHub Releases',
+                    subtitle: 'verssuite-mobile/releases',
+                    url: 'https://github.com/Xnuvers007/verssuite-mobile/releases',
+                    icon: Icons.new_releases_outlined,
                   ),
                   _SocialTile(
                     title: 'YouTube',
